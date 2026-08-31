@@ -54,12 +54,25 @@ estático vía GitHub Pages.
 
 ### Estado actual
 
-Este repositorio está en **Fase 1 (scaffolding)**: la estructura de carpetas está creada, pero los
-scripts, el dashboard, los tests y el workflow de GitHub Actions todavía no tienen implementación —
-cada carpeta contiene un `.gitkeep` como marcador temporal hasta que se agregue su contenido real.
+- **Fase 1 (scaffolding)**: hecha. Estructura de carpetas creada.
+- **Fase 2 (`scripts/scrape.py`)**: hecha para las fuentes con URL de descarga identificada:
+  - `fetch_fnc_excels` — Precios y Exportaciones de la FNC (scraping HTML + descarga de Excel).
+  - `fetch_all_market_quotes` — Contrato C (`KC=F`), USD/BRL (`USDBRL=X`) y USD/COP (`COP=X`)
+    vía `yfinance`, con la regla de descarte antes de las 2pm hora local.
+  - `fetch_oic_prices` — **pendiente**, lanza `NotImplementedError` a propósito: no hay URL de
+    descarga automática identificada para el PDF de la OIC (`I-CIP.pdf`); requiere descarga
+    manual y extracción vía `camelot`.
+  - Todas las funciones que sí dependen de red usan reintentos con backoff exponencial y lanzan
+    excepciones explícitas (`SourceUnavailableError`, `SourceStructureChangedError`) en vez de
+    fallar en silencio o devolver datos parciales sin marcar.
+- **Fases 3 en adelante** (`read_excel.py`, `consolidate.py`, `validate.py`, `main.py`, dashboard,
+  tests, workflow de Actions): pendientes.
 
-Antes de avanzar a la implementación (Fases 2 en adelante) hace falta confirmar, con el equipo
-técnico, los "supuestos a confirmar" de la Fase 0 del blueprint:
+dashboard/, tests/ y .github/workflows/ siguen con `.gitkeep` como marcador temporal hasta que se
+agregue su contenido real.
+
+Antes de avanzar más allá hace falta confirmar, con el equipo técnico, los "supuestos a confirmar"
+de la Fase 0 del blueprint:
 
 - URLs/fuentes exactas de scraping y qué dato se extrae de cada una.
 - Estructura de columnas del Excel manual (nombres, tipos, hoja).
