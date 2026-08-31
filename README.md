@@ -5,17 +5,23 @@ Repositorio creado para el procesamiento de datos relacionados con el Observator
 ## Pipeline de dashboard automatizado
 
 Este repositorio está siendo construido siguiendo el blueprint del pipeline que consolida datos de
-scraping web y de un Excel cargado manualmente, genera un dataset y lo publica en un dashboard HTML
-estático vía GitHub Pages.
+scraping web (FNC, mercado vía `yfinance`) y de un Excel de precios OIC cargado manualmente, genera
+un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
 
 ### Arquitectura general
 
 ```
-[Excel manual] ──push a data/manual/──┐
-                                       ├──▶ Script Python ──▶ data/output/*.json ──▶ Dashboard HTML (GitHub Pages)
-[Scraping web] ──cron GitHub Actions──┘
+[Excel manual de precios OIC] ──push a data/manual/──┐
+                                                      ├──▶ Script Python ──▶ data/output/*.json ──▶ Dashboard HTML (GitHub Pages)
+[Scraping web: FNC + mercado] ──cron GitHub Actions──┘
 ```
 
+- **Scraping automático** (`scripts/scrape.py`, Fase 2): Precios y Exportaciones de la FNC
+  (scraping HTML + descarga de Excel) y Contrato C / USD-BRL / USD-COP vía `yfinance`.
+- **Excel manual** (`scripts/read_excel.py`, Fase 3): `data/manual/BD_precios_ico_actualizado.xlsx`
+  con los precios de la OIC (ICO Composite, Colombian Milds, Otros Suaves, Naturales, Robustas) —
+  la OIC no tiene URL de descarga automática identificada, así que estos precios (originalmente
+  extraídos de un PDF vía `camelot`) se actualizan y suben a mano a esa ruta fija.
 - **Disparadores**: `schedule` (cron) + `push` sobre `data/manual/**` en el mismo workflow, para que
   subir un Excel nuevo también dispare una corrida sin esperar el próximo cron.
 - **Salida del script**: uno o más JSON/CSV en `data/output/`, versionados en el repo.
@@ -38,8 +44,8 @@ estático vía GitHub Pages.
 │   ├── validate.py         # valida rangos/columnas antes de publicar (Fase 4)
 │   └── main.py             # orquesta scrape → read_excel → consolidate → validate → export (Fase 5)
 ├── data/
-│   ├── manual/              # Excel subido a mano (ruta fija y estable)
-│   │   └── ultimo.xlsx
+│   ├── manual/              # Excel de precios OIC subido a mano (ruta fija y estable)
+│   │   └── BD_precios_ico_actualizado.xlsx
 │   └── output/               # JSON/CSV generados (se sobrescriben cada corrida)
 │       └── dataset.json
 ├── dashboard/
@@ -65,8 +71,20 @@ estático vía GitHub Pages.
   - Todas las funciones que sí dependen de red usan reintentos con backoff exponencial y lanzan
     excepciones explícitas (`SourceUnavailableError`, `SourceStructureChangedError`) en vez de
     fallar en silencio o devolver datos parciales sin marcar.
-- **Fases 3 en adelante** (`read_excel.py`, `consolidate.py`, `validate.py`, `main.py`, dashboard,
-  tests, workflow de Actions): pendientes.
+- **Fase 3 (`scripts/read_excel.py`)**: hecha.
+  - `read_oic_prices` — lee `data/manual/BD_precios_ico_actualizado.xlsx` (primera hoja, nombre de
+    archivo fijo — confirmado con el equipo), valida que existan las columnas esperadas (Fecha,
+    ICO Composite, Colombian Milds, Otros Suaves, Naturales, Robustas) tolerando variaciones
+    menores de acentos/mayúsculas/espacios en los encabezados, y lanza `ExcelValidationError`
+    (fallo rápido y descriptivo) si el archivo no existe, no se puede parsear, falta alguna
+    columna o la fecha no es interpretable.
+  - **Supuesto pendiente de confirmar**: los nombres exactos de columna en el archivo real — se
+    definieron por los cuatro grupos indicadores estándar de la OIC (Colombian Milds, Other Milds,
+    Brazilian Naturals, Robustas) más el ICO Composite, ya que aún no se compartió el archivo para
+    verificar los encabezados literales. Ver `EXPECTED_COLUMNS` en `scripts/read_excel.py` —
+    ajustar ahí si el archivo real usa otros nombres.
+- **Fases 4 en adelante** (`consolidate.py`, `validate.py`, `main.py`, dashboard, tests, workflow de
+  Actions): pendientes.
 
 dashboard/, tests/ y .github/workflows/ siguen con `.gitkeep` como marcador temporal hasta que se
 agregue su contenido real.
@@ -74,11 +92,13 @@ agregue su contenido real.
 Antes de avanzar más allá hace falta confirmar, con el equipo técnico, los "supuestos a confirmar"
 de la Fase 0 del blueprint:
 
-- URLs/fuentes exactas de scraping y qué dato se extrae de cada una.
-- Estructura de columnas del Excel manual (nombres, tipos, hoja).
+- ~~Estructura de columnas del Excel manual~~ — resuelto: es `BD_precios_ico_actualizado.xlsx` con
+  precios OIC (nombre exacto de columnas aún por verificar contra el archivo real, ver Fase 3 arriba).
+- ~~Nombre y formato fijo del Excel~~ — resuelto: `BD_precios_ico_actualizado.xlsx`, nombre fijo.
+- URLs/fuentes exactas de scraping y qué dato se extrae de cada una (más allá de lo ya cubierto en
+  Fase 2 — ver tabla de fuentes abajo).
 - Métricas/KPIs que debe mostrar el dashboard (define el esquema del JSON de salida).
 - Frecuencia real del cron (diaria, varias veces al día, semanal).
-- Nombre y formato fijo del Excel (`ultimo.xlsx` vs. nombre con fecha).
 - Si GitHub Pages sirve desde `main` o desde una rama/carpeta `docs/`.
 
 ### Fuentes y cálculos identificados (referencia del notebook original)
@@ -88,7 +108,7 @@ de la Fase 0 del blueprint:
 | FNC — Precios y Exportaciones | Scraping (`requests` + `BeautifulSoup`) | Busca en `federaciondecafeteros.org/wp/estadisticas-cafeteras/` el link cuyo `href` matchea "Precios" / "Exportaciones" por regex, descarga el Excel |
 | Producción y valor de cosecha | Lectura de Excel (hojas `9. Producción mensual`, `10. Valor cosecha`) | Del mismo Excel que descarga la FNC |
 | Exportaciones (volumen y valor) | Lectura de Excel (hojas `1. Total_Volumen`, `2. Total_Valor`) | Ídem |
-| OIC (precio ICO composite, Colombian Milds, etc.) | Extracción de tabla de PDF vía `camelot` | El PDF (`I-CIP.pdf`) ya está descargado a mano — no hay URL de descarga automática identificada |
+| OIC (precio ICO composite, Colombian Milds, Otros Suaves, Naturales, Robustas) | Excel manual (`scripts/read_excel.py`) | No hay URL de descarga automática identificada para el PDF de la OIC. Estos precios se cargan a mano en `data/manual/BD_precios_ico_actualizado.xlsx` |
 | Contrato C (café, ICE) | `yfinance`, ticker `KC=F` | Descarta el dato del día si la hora local es antes de las 2pm (mercado sin cerrar) |
 | USD/BRL | `yfinance`, ticker `USDBRL=X` | Misma regla de las 2pm |
 | USD/COP | `yfinance`, ticker `COP=X` | Misma regla de las 2pm |
