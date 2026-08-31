@@ -7,13 +7,15 @@ blueprint), así que estos precios —originalmente extraídos de un PDF vía
 repo. `scrape.py` ya cubre las fuentes que sí tienen descarga automática
 (FNC, yfinance); este módulo solo lee y valida esta hoja manual.
 
-Esquema de columnas ASUMIDO — pendiente de confirmar contra el archivo
-real (ver README, "Supuestos a confirmar"): una fila por fecha con el
-precio ICO compuesto y los cuatro grupos indicadores de la OIC
-(Colombian Milds, Otros Suaves, Naturales, Robustas). El matching de
-columnas es tolerante a variaciones menores de acentos/mayúsculas/
-espacios, pero si los encabezados reales usan otros nombres, hay que
-ajustar `EXPECTED_COLUMNS` abajo.
+Esquema de columnas confirmado contra el archivo real
+(`BD_precios_ICO_actualizada.xlsx`, hoja única `Sheet1`, una fila por
+fecha, sin nulos, datos desde 2019-07-01): ICO Composite Indicator,
+Colombian Milds, Other Milds, Brazilian Naturals y Robustas (todas en
+US¢ por libra), más dos columnas de spread ya calculadas en el propio
+Excel (Colombian Milds vs Brazilian Naturals / vs Robustas) — estas
+últimas son opcionales, se capturan si están presentes pero no hacen
+fallar la validación si faltan. El matching de columnas es tolerante a
+variaciones menores de acentos/mayúsculas/espacios.
 """
 
 from __future__ import annotations
@@ -26,22 +28,34 @@ from typing import Optional, Union
 
 import pandas as pd
 
-DEFAULT_MANUAL_EXCEL_PATH = Path("data/manual/BD_precios_ico_actualizado.xlsx")
+DEFAULT_MANUAL_EXCEL_PATH = Path("data/manual/BD_precios_ICO_actualizada.xlsx")
 
 # columna canónica -> alias aceptados (comparados ya normalizados: sin
 # acentos, en minúsculas, con espacios colapsados)
 EXPECTED_COLUMNS: dict[str, tuple[str, ...]] = {
     "fecha": ("fecha", "date"),
     "ico_composite": (
+        "ico composite indicator (us por libra)",
         "ico composite",
         "ico compuesto",
-        "precio ico composite",
         "composite indicator",
     ),
-    "colombian_milds": ("colombian milds", "suaves colombianos"),
-    "other_milds": ("otros suaves", "other milds"),
-    "brazilian_naturals": ("naturales", "brazilian naturals", "naturales brasilenos"),
-    "robustas": ("robustas",),
+    "colombian_milds": ("colombian milds (us por libra)", "colombian milds", "suaves colombianos"),
+    "other_milds": ("other milds (us por libra)", "otros suaves", "other milds"),
+    "brazilian_naturals": (
+        "brazilian naturals (us por libra)",
+        "naturales",
+        "brazilian naturals",
+        "naturales brasilenos",
+    ),
+    "robustas": ("robustas (us por libra)", "robustas"),
+}
+
+# columnas opcionales: se capturan si están presentes (el Excel real ya
+# trae estos spreads precalculados), pero no son obligatorias.
+OPTIONAL_COLUMNS: dict[str, tuple[str, ...]] = {
+    "spread_col_milds_vs_bra_naturals": ("spread col milds vs bra naturals",),
+    "spread_col_milds_vs_bra_robustas": ("spread col milds vs bra robustas",),
 }
 
 
@@ -57,6 +71,8 @@ class OICPriceRow:
     other_milds: Optional[float]
     brazilian_naturals: Optional[float]
     robustas: Optional[float]
+    spread_col_milds_vs_bra_naturals: Optional[float] = None
+    spread_col_milds_vs_bra_robustas: Optional[float] = None
 
 
 def _normalize(name: str) -> str:
@@ -65,11 +81,11 @@ def _normalize(name: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def _match_columns(columns: list[str]) -> dict[str, str]:
-    """Mapea cada columna canónica esperada a su nombre real en el DataFrame."""
+def _match_columns(columns: list[str], schema: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    """Mapea cada columna canónica de `schema` a su nombre real en el DataFrame."""
     normalized_to_original = {_normalize(c): c for c in columns}
     resolved: dict[str, str] = {}
-    for canonical, aliases in EXPECTED_COLUMNS.items():
+    for canonical, aliases in schema.items():
         for alias in aliases:
             if alias in normalized_to_original:
                 resolved[canonical] = normalized_to_original[alias]
@@ -106,18 +122,21 @@ def read_oic_prices(
     except Exception as exc:
         raise ExcelValidationError(f"No se pudo leer {path} como Excel: {exc}") from exc
 
-    resolved = _match_columns(list(df.columns))
+    resolved = _match_columns(list(df.columns), EXPECTED_COLUMNS)
     missing = set(EXPECTED_COLUMNS) - set(resolved)
     if missing:
         raise ExcelValidationError(
             f"Al Excel manual {path} le faltan columnas esperadas: {', '.join(sorted(missing))}. "
             f"Columnas encontradas: {list(df.columns)}. Esquema esperado documentado en "
-            "scripts/read_excel.py (EXPECTED_COLUMNS) — pendiente de confirmar contra el "
-            "archivo real (ver README)."
+            "scripts/read_excel.py (EXPECTED_COLUMNS)."
         )
 
-    df = df.rename(columns={original: canonical for canonical, original in resolved.items()})
-    df = df[list(EXPECTED_COLUMNS.keys())]
+    resolved_optional = _match_columns(list(df.columns), OPTIONAL_COLUMNS)
+
+    all_resolved = {**resolved, **resolved_optional}
+    df = df.rename(columns={original: canonical for canonical, original in all_resolved.items()})
+    present_canonical_columns = list(EXPECTED_COLUMNS) + list(resolved_optional)
+    df = df[present_canonical_columns]
 
     try:
         df["fecha"] = pd.to_datetime(df["fecha"])
@@ -136,6 +155,16 @@ def read_oic_prices(
             other_milds=_to_optional_float(row["other_milds"]),
             brazilian_naturals=_to_optional_float(row["brazilian_naturals"]),
             robustas=_to_optional_float(row["robustas"]),
+            spread_col_milds_vs_bra_naturals=_to_optional_float(
+                row["spread_col_milds_vs_bra_naturals"]
+            )
+            if "spread_col_milds_vs_bra_naturals" in df.columns
+            else None,
+            spread_col_milds_vs_bra_robustas=_to_optional_float(
+                row["spread_col_milds_vs_bra_robustas"]
+            )
+            if "spread_col_milds_vs_bra_robustas" in df.columns
+            else None,
         )
         for _, row in df.iterrows()
     ]

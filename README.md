@@ -18,7 +18,7 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
 
 - **Scraping automático** (`scripts/scrape.py`, Fase 2): Precios y Exportaciones de la FNC
   (scraping HTML + descarga de Excel) y Contrato C / USD-BRL / USD-COP vía `yfinance`.
-- **Excel manual** (`scripts/read_excel.py`, Fase 3): `data/manual/BD_precios_ico_actualizado.xlsx`
+- **Excel manual** (`scripts/read_excel.py`, Fase 3): `data/manual/BD_precios_ICO_actualizada.xlsx`
   con los precios de la OIC (ICO Composite, Colombian Milds, Otros Suaves, Naturales, Robustas) —
   la OIC no tiene URL de descarga automática identificada, así que estos precios (originalmente
   extraídos de un PDF vía `camelot`) se actualizan y suben a mano a esa ruta fija.
@@ -45,7 +45,7 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
 │   └── main.py             # orquesta scrape → read_excel → consolidate → validate → export (Fase 5)
 ├── data/
 │   ├── manual/              # Excel de precios OIC subido a mano (ruta fija y estable)
-│   │   └── BD_precios_ico_actualizado.xlsx
+│   │   └── BD_precios_ICO_actualizada.xlsx
 │   └── output/               # JSON/CSV generados (se sobrescriben cada corrida)
 │       └── dataset.json
 ├── dashboard/
@@ -71,18 +71,21 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
   - Todas las funciones que sí dependen de red usan reintentos con backoff exponencial y lanzan
     excepciones explícitas (`SourceUnavailableError`, `SourceStructureChangedError`) en vez de
     fallar en silencio o devolver datos parciales sin marcar.
-- **Fase 3 (`scripts/read_excel.py`)**: hecha.
-  - `read_oic_prices` — lee `data/manual/BD_precios_ico_actualizado.xlsx` (primera hoja, nombre de
-    archivo fijo — confirmado con el equipo), valida que existan las columnas esperadas (Fecha,
-    ICO Composite, Colombian Milds, Otros Suaves, Naturales, Robustas) tolerando variaciones
-    menores de acentos/mayúsculas/espacios en los encabezados, y lanza `ExcelValidationError`
-    (fallo rápido y descriptivo) si el archivo no existe, no se puede parsear, falta alguna
-    columna o la fecha no es interpretable.
-  - **Supuesto pendiente de confirmar**: los nombres exactos de columna en el archivo real — se
-    definieron por los cuatro grupos indicadores estándar de la OIC (Colombian Milds, Other Milds,
-    Brazilian Naturals, Robustas) más el ICO Composite, ya que aún no se compartió el archivo para
-    verificar los encabezados literales. Ver `EXPECTED_COLUMNS` en `scripts/read_excel.py` —
-    ajustar ahí si el archivo real usa otros nombres.
+- **Fase 3 (`scripts/read_excel.py`)**: hecha y validada contra el archivo real.
+  - `read_oic_prices` — lee `data/manual/BD_precios_ICO_actualizada.xlsx` (hoja única `Sheet1`,
+    nombre de archivo fijo — confirmado con el equipo y verificado contra el archivo real), valida
+    que existan las columnas esperadas (Fecha, Ico Composite Indicator, Colombian Milds, Other
+    Milds, Brazilian Naturals, Robustas — todas en US¢ por libra) tolerando variaciones menores de
+    acentos/mayúsculas/espacios en los encabezados, y lanza `ExcelValidationError` (fallo rápido y
+    descriptivo) si el archivo no existe, no se puede parsear, falta alguna columna o la fecha no
+    es interpretable.
+  - El archivo real también trae dos columnas de spread ya calculadas (Colombian Milds vs Brazilian
+    Naturals / vs Robustas); `read_oic_prices` las captura como campos opcionales
+    (`spread_col_milds_vs_bra_naturals`, `spread_col_milds_vs_bra_robustas`) sin exigirlas.
+  - Probado end-to-end contra `data/manual/BD_precios_ICO_actualizada.xlsx`: 2.466 filas, del
+    2019-07-01 al 2026-03-31, sin nulos.
+  - El archivo real (`data/manual/BD_precios_ICO_actualizada.xlsx`) ya está commiteado en el repo —
+    es la carga manual vigente, no un fixture de prueba.
 - **Fases 4 en adelante** (`consolidate.py`, `validate.py`, `main.py`, dashboard, tests, workflow de
   Actions): pendientes.
 
@@ -92,9 +95,9 @@ agregue su contenido real.
 Antes de avanzar más allá hace falta confirmar, con el equipo técnico, los "supuestos a confirmar"
 de la Fase 0 del blueprint:
 
-- ~~Estructura de columnas del Excel manual~~ — resuelto: es `BD_precios_ico_actualizado.xlsx` con
-  precios OIC (nombre exacto de columnas aún por verificar contra el archivo real, ver Fase 3 arriba).
-- ~~Nombre y formato fijo del Excel~~ — resuelto: `BD_precios_ico_actualizado.xlsx`, nombre fijo.
+- ~~Estructura de columnas del Excel manual~~ — resuelto y verificado contra el archivo real: ver
+  Fase 3 arriba.
+- ~~Nombre y formato fijo del Excel~~ — resuelto: `BD_precios_ICO_actualizada.xlsx`, nombre fijo.
 - URLs/fuentes exactas de scraping y qué dato se extrae de cada una (más allá de lo ya cubierto en
   Fase 2 — ver tabla de fuentes abajo).
 - Métricas/KPIs que debe mostrar el dashboard (define el esquema del JSON de salida).
@@ -108,7 +111,7 @@ de la Fase 0 del blueprint:
 | FNC — Precios y Exportaciones | Scraping (`requests` + `BeautifulSoup`) | Busca en `federaciondecafeteros.org/wp/estadisticas-cafeteras/` el link cuyo `href` matchea "Precios" / "Exportaciones" por regex, descarga el Excel |
 | Producción y valor de cosecha | Lectura de Excel (hojas `9. Producción mensual`, `10. Valor cosecha`) | Del mismo Excel que descarga la FNC |
 | Exportaciones (volumen y valor) | Lectura de Excel (hojas `1. Total_Volumen`, `2. Total_Valor`) | Ídem |
-| OIC (precio ICO composite, Colombian Milds, Otros Suaves, Naturales, Robustas) | Excel manual (`scripts/read_excel.py`) | No hay URL de descarga automática identificada para el PDF de la OIC. Estos precios se cargan a mano en `data/manual/BD_precios_ico_actualizado.xlsx` |
+| OIC (ICO Composite, Colombian Milds, Other Milds, Brazilian Naturals, Robustas) | Excel manual (`scripts/read_excel.py`) | No hay URL de descarga automática identificada para el PDF de la OIC. Estos precios se cargan a mano en `data/manual/BD_precios_ICO_actualizada.xlsx` (2.466 filas, desde 2019-07-01) |
 | Contrato C (café, ICE) | `yfinance`, ticker `KC=F` | Descarta el dato del día si la hora local es antes de las 2pm (mercado sin cerrar) |
 | USD/BRL | `yfinance`, ticker `USDBRL=X` | Misma regla de las 2pm |
 | USD/COP | `yfinance`, ticker `COP=X` | Misma regla de las 2pm |
