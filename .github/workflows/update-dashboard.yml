@@ -1,0 +1,69 @@
+name: Actualizar dashboard
+
+# Sin trigger de schedule/cron a propósito: todavía falta correr la Fase 5.5
+# (validar scripts/main.py contra las fuentes de red reales, ver README) antes
+# de automatizar corridas periódicas. Por ahora el pipeline solo corre cuando
+# alguien sube un Excel manual nuevo, o a demanda desde la pestaña Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/manual/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Evita que dos despliegues a Pages corran a la vez; no cancela uno en curso
+# para no dejar el sitio a medio publicar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-dataset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Correr el pipeline (scrape → read_excel → consolidate → validate → export)
+        run: python scripts/main.py
+
+      - name: Commitear data/output/dataset.json actualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/output/dataset.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios en dataset.json, no se commitea."
+          else
+            git commit -m "Actualiza dataset.json - $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
+
+      - name: Preparar artifact de GitHub Pages (repo completo, dashboard/ + data/output/)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy-pages:
+    needs: build-dataset
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Observatorio FEPCafé</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232a78d6'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="page-header">
+  <div class="page-header__title">
+    <h1>Observatorio FEPCafé</h1>
+    <p class="page-header__subtitle">Precios OIC, mercado y cifras de la FNC</p>
+  </div>
+  <div id="status-bar" class="status-bar" aria-live="polite"></div>
+</header>
+
+<main id="app">
+  <div id="loading-state" class="state-message">Cargando datos…</div>
+  <div id="error-state" class="state-message state-message--error" hidden></div>
+
+  <div id="content" hidden>
+    <div id="warnings-banner" class="warnings-banner" hidden></div>
+
+    <section id="kpi-row" class="kpi-row" aria-label="Indicadores principales"></section>
+
+    <section class="filter-row" aria-label="Rango de fechas">
+      <span class="filter-row__label">Rango:</span>
+      <div id="date-range-filter" class="preset-group" role="group" aria-label="Rango de fechas para los precios diarios"></div>
+    </section>
+
+    <section class="chart-card" aria-label="Precios diarios OIC">
+      <div class="chart-card__head">
+        <h2>Precios diarios OIC</h2>
+        <button type="button" class="table-toggle" data-target="oic-table-wrap">Ver como tabla</button>
+      </div>
+      <p class="chart-card__caption">US¢ por libra. Fuente: Excel manual de precios OIC.</p>
+      <div id="oic-chart" class="chart-mount"></div>
+      <div id="oic-legend" class="legend" role="group" aria-label="Series de precios OIC"></div>
+      <div id="oic-table-wrap" class="table-wrap" hidden></div>
+    </section>
+
+    <section class="chart-card" aria-label="Diferencial UGQ">
+      <div class="chart-card__head">
+        <h2>Diferencial UGQ</h2>
+        <button type="button" class="table-toggle" data-target="ugq-table-wrap">Ver como tabla</button>
+      </div>
+      <p class="chart-card__caption">Colombian Milds (OIC) − Contrato C. US¢ por libra, desde julio 2019.</p>
+      <div id="ugq-chart" class="chart-mount"></div>
+      <div id="ugq-table-wrap" class="table-wrap" hidden></div>
+    </section>
+
+    <section class="chart-card" aria-label="Producción mensual">
+      <div class="chart-card__head">
+        <h2>Producción mensual</h2>
+        <button type="button" class="table-toggle" data-target="produccion-table-wrap">Ver como tabla</button>
+      </div>
+      <p class="chart-card__caption">Miles de sacos de 60 Kg de café verde equivalente. Fuente: FNC.</p>
+      <div id="produccion-chart" class="chart-mount"></div>
+      <div id="produccion-table-wrap" class="table-wrap" hidden></div>
+    </section>
+
+    <section class="chart-card" aria-label="Valor de la cosecha por año cafetero">
+      <div class="chart-card__head">
+        <h2>Valor de la cosecha por año cafetero</h2>
+        <button type="button" class="table-toggle" data-target="cosecha-table-wrap">Ver como tabla</button>
+      </div>
+      <p class="chart-card__caption">Millones de pesos COP. Fuente: FNC.</p>
+      <div id="cosecha-chart" class="chart-mount"></div>
+      <div id="cosecha-table-wrap" class="table-wrap" hidden></div>
+    </section>
+
+    <section class="chart-card chart-card--pending" aria-label="Exportaciones">
+      <div class="chart-card__head">
+        <h2>Exportaciones</h2>
+      </div>
+      <p class="chart-card__caption">Pendiente: la FNC publica Exportaciones en un Excel aparte al de Precios, todavía no incorporado al pipeline.</p>
+    </section>
+  </div>
+</main>
+
+<div id="tooltip" class="tooltip" hidden role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

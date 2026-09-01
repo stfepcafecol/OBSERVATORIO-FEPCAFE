@@ -13,7 +13,7 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
 ```
 [Excel manual de precios OIC] ──push a data/manual/──┐
                                                       ├──▶ Script Python ──▶ data/output/*.json ──▶ Dashboard HTML (GitHub Pages)
-[Scraping web: FNC + mercado] ──cron GitHub Actions──┘
+[Scraping web: FNC + mercado] ──dispara el mismo workflow──┘
 ```
 
 - **Scraping automático** (`scripts/scrape.py`, Fase 2): Precios y Exportaciones de la FNC
@@ -22,13 +22,15 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
   con los precios de la OIC (ICO Composite, Colombian Milds, Otros Suaves, Naturales, Robustas) —
   la OIC no tiene URL de descarga automática identificada, así que estos precios (originalmente
   extraídos de un PDF vía `camelot`) se actualizan y suben a mano a esa ruta fija.
-- **Disparadores**: `schedule` (cron) + `push` sobre `data/manual/**` en el mismo workflow, para que
-  subir un Excel nuevo también dispare una corrida sin esperar el próximo cron.
+- **Disparadores**: `push` sobre `data/manual/**` (subir un Excel nuevo dispara la corrida) +
+  `workflow_dispatch` (corrida manual desde la pestaña Actions). **Sin `schedule`/cron a propósito**
+  — ver Fase 6 abajo.
 - **Salida del script**: uno o más JSON/CSV en `data/output/`, versionados en el repo.
 - **Dashboard**: HTML/CSS/JS estático que hace `fetch` de los JSON en `data/output/` — sin backend,
   sin build step.
-- **Despliegue**: GitHub Pages sirviendo la rama (o carpeta `/docs`) donde vive el dashboard; el
-  propio workflow hace commit de los datos nuevos.
+- **Despliegue**: GitHub Pages vía `actions/deploy-pages`, publicando el repositorio completo como
+  artifact (así `dashboard/index.html` puede seguir haciendo `fetch('../data/output/dataset.json')`
+  con rutas relativas, sin tener que copiar archivos entre carpetas).
 
 ### Estructura de repositorio
 
@@ -48,12 +50,12 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
 │   │   └── BD_precios_ICO_actualizada.xlsx
 │   └── output/               # JSON/CSV generados (se sobrescriben cada corrida)
 │       └── dataset.json
-├── dashboard/
-│   ├── index.html          # Fase 7
+├── dashboard/               # Fase 7 — sin librerías externas, sin build step
+│   ├── index.html
 │   ├── style.css
 │   └── app.js
 ├── tests/
-│   └── test_consolidate.py  # Fase 8
+│   └── test_consolidate.py  # Fase 8 — pendiente
 ├── requirements.txt
 └── README.md
 ```
@@ -132,10 +134,42 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
     `serie_diaria`; caso de falla del Excel de OIC hace `sys.exit(1)` sin escribir el archivo de
     salida. **Falta correr contra las fuentes de red reales** (FNC, `yfinance`) — eso es
     precisamente la Fase 5.5 de abajo.
-- **Fase 6 en adelante** (dashboard, tests, workflow de Actions): pendientes.
+- **Fase 6 (`.github/workflows/update-dashboard.yml`)**: hecha, **sin trigger de `schedule`/cron a
+  propósito** — todavía falta correr la Fase 5.5 (validar `main.py` contra las fuentes de red
+  reales) antes de automatizar corridas periódicas. Por ahora el workflow solo corre con:
+  - `push` sobre `data/manual/**` (subir un Excel nuevo dispara la corrida).
+  - `workflow_dispatch` (botón "Run workflow" en la pestaña Actions, para correrlo a demanda).
+  - Pasos: checkout → Python 3.12 → `pip install -r requirements.txt` → `python scripts/main.py` →
+    si `data/output/dataset.json` cambió, lo commitea y pushea con el `GITHUB_TOKEN` por defecto →
+    publica el repositorio completo como artifact de Pages → `actions/deploy-pages` lo despliega.
+  - Para activarlo la primera vez hace falta configurar, en Settings → Pages del repositorio,
+    **Source: GitHub Actions** (no "Deploy from a branch") — eso no se puede hacer desde un push,
+    es un ajuste manual de la configuración del repo.
+  - **Agregar el cron es un cambio de una línea** (`schedule: - cron: "..."` en el `on:` del
+    workflow) una vez completada la Fase 5.5 — ver README del blueprint para la hora en UTC.
+- **Fase 7 (`dashboard/`)**: hecha — `index.html` + `style.css` + `app.js`, sin librerías externas ni
+  build step (gráficos SVG a mano, siguiendo la guía de dataviz del proyecto: paleta validada por
+  contraste/daltonismo, tooltip con crosshair, leyenda con toggle por serie, vista de tabla como
+  gemelo accesible de cada gráfico, modo oscuro vía `prefers-color-scheme`).
+  - Muestra: fecha de última actualización y advertencias de `validate.py` (banner visible, no solo
+    en el log de Actions); cotizaciones actuales (Contrato C, USD/BRL, USD/COP) + últimos valores de
+    Colombian Milds y diferencial UGQ como stat tiles; precios diarios OIC (5 series, con filtro de
+    rango de fechas: último año / últimos 5 años / todo); diferencial UGQ (con línea base en cero);
+    producción mensual y valor de cosecha por año cafetero (FNC); un aviso de que Exportaciones
+    todavía está pendiente.
+  - **Selección de KPIs/gráficos sin confirmar formalmente con el equipo** (ver "supuestos" abajo) —
+    se construyó con lo que el dataset consolidado ya tiene disponible; ajustar si el equipo pide
+    otras métricas.
+  - Probado en un navegador real (Chromium vía Playwright) contra un `dataset.json` generado con los
+    archivos reales de OIC/FNC (cotizaciones de mercado simuladas, sin red en este entorno):
+    tooltip/crosshair, toggle de leyenda, vista de tabla, filtro de rango y modo claro/oscuro
+    funcionan correctamente. **Sin probar contra datos 100% reales de mercado** — eso llega con la
+    Fase 5.5.
+  - **Paleta de color es un placeholder**: se usó la paleta de referencia validada de la guía de
+    dataviz (no hay colores/branding de FEPCafé definidos todavía) — sustituir cuando estén.
+- **Fase 8** (tests): pendiente.
 
-dashboard/, tests/ y .github/workflows/ siguen con `.gitkeep` como marcador temporal hasta que se
-agregue su contenido real.
+tests/ sigue con `.gitkeep` como marcador temporal hasta que se agregue su contenido real.
 
 Antes de avanzar más allá hace falta confirmar, con el equipo técnico, los "supuestos a confirmar"
 de la Fase 0 del blueprint:
@@ -145,9 +179,13 @@ de la Fase 0 del blueprint:
 - ~~Nombre y formato fijo del Excel~~ — resuelto: `BD_precios_ICO_actualizada.xlsx`, nombre fijo.
 - URLs/fuentes exactas de scraping y qué dato se extrae de cada una (más allá de lo ya cubierto en
   Fase 2 — ver tabla de fuentes abajo).
-- Métricas/KPIs que debe mostrar el dashboard (define el esquema del JSON de salida).
-- Frecuencia real del cron (diaria, varias veces al día, semanal).
-- Si GitHub Pages sirve desde `main` o desde una rama/carpeta `docs/`.
+- Métricas/KPIs que debe mostrar el dashboard — Fase 7 se construyó con una selección razonable
+  según los datos disponibles (ver Fase 7 arriba), no confirmada formalmente con el equipo.
+- ~~Si GitHub Pages sirve desde `main` o desde una rama/carpeta `docs/`~~ — resuelto de otra forma:
+  el workflow (Fase 6) despliega con `actions/deploy-pages` publicando el repo completo como
+  artifact, así que no depende de la convención de branch/carpeta de GitHub Pages.
+- Frecuencia del cron — **todavía no aplica**: Fase 6 se construyó sin `schedule` a propósito (ver
+  arriba), hasta que se corra la Fase 5.5.
 
 ### Fuentes y cálculos identificados (referencia del notebook original)
 
@@ -175,16 +213,23 @@ pip install -r requirements.txt
 python scripts/main.py
 ```
 
-Esto genera `data/output/dataset.json`, que el dashboard (`dashboard/index.html`, Fase 7 — aún sin
-construir) va a consumir vía `fetch` — no requiere levantar un servidor backend. Requiere tener
-`data/manual/BD_precios_ICO_actualizada.xlsx` en el repo (ya está commiteado) y conexión a internet
-para la FNC y `yfinance`.
+Esto genera `data/output/dataset.json`, que `dashboard/index.html` consume vía `fetch` — no requiere
+levantar un servidor backend, basta con abrir el HTML a través de cualquier servidor estático (ej.
+`python -m http.server` desde la raíz del repo) porque `fetch` no funciona sobre `file://`. Requiere
+tener `data/manual/BD_precios_ICO_actualizada.xlsx` en el repo (ya está commiteado) y conexión a
+internet para la FNC y `yfinance`.
 
 ### Próximos pasos
 
-Ver el blueprint completo para el detalle de cada fase (6 a 8). **No se avanza a la Fase 6**
-(automatización con GitHub Actions) hasta correr `python scripts/main.py` en un entorno con acceso
-real a internet y validar que los números coinciden con el reporte de referencia (Fase 5.5) — este
-entorno de desarrollo tiene salida de red restringida a dominios aprobados, así que las pruebas de
-`scrape.py`/`main.py` hechas hasta ahora simulan las respuestas de la FNC y `yfinance` en vez de
-llamarlas de verdad.
+1. **Fase 5.5 (pendiente, obligatoria antes de activar un cron)**: correr `python scripts/main.py`
+   en un entorno con acceso real a internet y comparar los números del `dataset.json` resultante
+   contra el reporte de referencia. Este entorno de desarrollo tiene salida de red restringida a
+   dominios aprobados, así que todas las pruebas de `scrape.py`/`main.py`/el dashboard hechas hasta
+   ahora simulan las respuestas de la FNC y `yfinance` en vez de llamarlas de verdad.
+2. Configurar **Settings → Pages → Source: GitHub Actions** en el repositorio (ajuste manual, una
+   sola vez) para que el workflow de la Fase 6 pueda desplegar.
+3. Confirmar con el equipo la selección de KPIs del dashboard (Fase 7) y el Excel de Exportaciones
+   de la FNC (para completar `parse_fnc_exports`, pendiente desde la Fase 4).
+4. Una vez validada la Fase 5.5, agregar el trigger `schedule` al workflow (una línea) con la
+   frecuencia que el equipo confirme.
+5. Fase 8: tests con fixtures fijos para `consolidate.py`/`validate.py`.
