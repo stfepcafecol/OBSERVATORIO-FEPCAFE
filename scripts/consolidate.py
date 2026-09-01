@@ -14,6 +14,13 @@ Exportaciones (hojas "Total_Volumen"/"Total_Valor") queda pendiente:
 la FNC las publica en un Excel de "Exportaciones" aparte que todavía no
 se compartió para verificar su estructura — `parse_fnc_exports` lanza
 NotImplementedError a propósito, mismo patrón que `scrape.fetch_oic_prices`.
+
+`consolidate()` solo arma el dataset a partir de piezas ya obtenidas — no
+descarga ni parsea nada por sí mismo. Obtener cada fuente y decidir qué
+hacer si falla (abortar vs. continuar con advertencia) es responsabilidad
+de `main.py` (Fase 5), que sí importa y llama a `parse_fnc_production` /
+`parse_fnc_harvest_value` directamente antes de pasarle el resultado a
+`consolidate()`.
 """
 
 from __future__ import annotations
@@ -267,28 +274,24 @@ def consolidate(
     oic_rows: list[OICPriceRow],
     contrato_c_history: list[MarketQuote],
     market_quotes: list[MarketQuote],
-    fnc_precios_excel_content: Optional[bytes] = None,
+    produccion_mensual: Optional[list[FNCProductionRow]] = None,
+    valor_cosecha: Optional[FNCHarvestValueData] = None,
 ) -> ConsolidatedDataset:
-    """Orquesta la consolidación: serie diaria + cotizaciones + hojas de la FNC.
+    """Arma el ConsolidatedDataset a partir de las piezas ya obtenidas/parseadas.
 
-    `fnc_precios_excel_content` es opcional: si no se pasa (por ejemplo,
-    porque scrape.fetch_fnc_excels falló o no se corrió), Producción
-    mensual y Valor cosecha quedan como listas vacías en vez de hacer
-    fallar toda la consolidación — la decisión de si eso es aceptable
-    para publicar es de validate.py, no de este módulo.
+    Este módulo no decide qué hacer si una fuente falló — eso es
+    responsabilidad de quien orquesta (`main.py`, Fase 5), que intenta
+    obtener y parsear cada fuente y decide si continuar con advertencia
+    o abortar. Por eso `produccion_mensual`/`valor_cosecha` llegan ya
+    resueltos (o vacíos) en vez de que `consolidate()` intente parsear un
+    Excel crudo y pueda hacer explotar la consolidación completa por un
+    cambio de formato en una fuente secundaria.
     """
     serie_diaria = build_daily_series(oic_rows, contrato_c_history)
-
-    if fnc_precios_excel_content is not None:
-        produccion_mensual = parse_fnc_production(fnc_precios_excel_content)
-        valor_cosecha = parse_fnc_harvest_value(fnc_precios_excel_content)
-    else:
-        produccion_mensual = []
-        valor_cosecha = FNCHarvestValueData(por_anio_calendario=[], por_anio_cafetero=[])
 
     return ConsolidatedDataset(
         serie_diaria=serie_diaria,
         cotizaciones_actuales=market_quotes,
-        produccion_mensual=produccion_mensual,
-        valor_cosecha=valor_cosecha,
+        produccion_mensual=produccion_mensual or [],
+        valor_cosecha=valor_cosecha or FNCHarvestValueData(por_anio_calendario=[], por_anio_cafetero=[]),
     )

@@ -114,7 +114,25 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
     `parse_fnc_harvest_value` (26 años calendario, 25 años cafeteros, descartando años futuros sin
     valor aún), `build_daily_series` (2.466 filas) y ambos niveles de `validate_dataset` (caso
     feliz + los dos casos críticos).
-- **Fase 5 en adelante** (`main.py`, dashboard, tests, workflow de Actions): pendientes.
+- **Fase 5 (`scripts/main.py`)**: hecha y probada end-to-end (con red simulada, ver abajo).
+  - `run()` orquesta: lee OIC → descarga y parsea FNC Precios → descarga histórico de Contrato C →
+    obtiene cotizaciones actuales → `consolidate()` → `validate_dataset()` → arma el dict de salida.
+  - **Regla de fallo acordada con el equipo**: el Excel manual de OIC es fatal si falla (aborta con
+    `sys.exit(1)`, no se escribe `dataset.json`); las fuentes secundarias (Excel de Precios de la
+    FNC, histórico de Contrato C, cotizaciones actuales) fallan "suave" — si `scrape.py` no puede
+    obtenerlas o cambió su formato, el pipeline sigue con esa fuente vacía y una advertencia. Un
+    problema crítico de `validate_dataset()` (fechas futuras, precios fuera de rango, etc.) también
+    aborta con `sys.exit(1)`, incluso si todas las fuentes se obtuvieron bien.
+  - `data/output/dataset.json` incluye `generated_at` (timestamp UTC de la corrida) y `warnings`
+    (las advertencias de `validate_dataset()`, ej. "Exportaciones no implementado", "USD/COP
+    descartado por intradía") — visibles para que el dashboard (Fase 7) las muestre al usuario
+    final, no solo en el log de Actions.
+  - Probado end-to-end: caso feliz (con los archivos reales de OIC y FNC, cotizaciones de mercado
+    simuladas — sin red disponible en este entorno) escribe un JSON válido de 2.466 filas en
+    `serie_diaria`; caso de falla del Excel de OIC hace `sys.exit(1)` sin escribir el archivo de
+    salida. **Falta correr contra las fuentes de red reales** (FNC, `yfinance`) — eso es
+    precisamente la Fase 5.5 de abajo.
+- **Fase 6 en adelante** (dashboard, tests, workflow de Actions): pendientes.
 
 dashboard/, tests/ y .github/workflows/ siguen con `.gitkeep` como marcador temporal hasta que se
 agregue su contenido real.
@@ -151,19 +169,22 @@ parseo sin aviso.
 
 ### Cómo correr el pipeline localmente (para pruebas, sin depender del cron)
 
-Una vez implementados los scripts (Fase 5 en adelante), el pipeline completo se ejecutará con:
-
 ```bash
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python scripts/main.py
 ```
 
-Esto generará `data/output/dataset.json`, que el dashboard (`dashboard/index.html`) consume vía
-`fetch` — no requiere levantar un servidor backend.
+Esto genera `data/output/dataset.json`, que el dashboard (`dashboard/index.html`, Fase 7 — aún sin
+construir) va a consumir vía `fetch` — no requiere levantar un servidor backend. Requiere tener
+`data/manual/BD_precios_ICO_actualizada.xlsx` en el repo (ya está commiteado) y conexión a internet
+para la FNC y `yfinance`.
 
 ### Próximos pasos
 
-Ver el blueprint completo para el detalle de cada fase (2 a 8). No se avanza a la Fase 6
-(automatización con GitHub Actions) hasta validar localmente que los números del pipeline
-coinciden con el reporte de referencia (Fase 5.5).
+Ver el blueprint completo para el detalle de cada fase (6 a 8). **No se avanza a la Fase 6**
+(automatización con GitHub Actions) hasta correr `python scripts/main.py` en un entorno con acceso
+real a internet y validar que los números coinciden con el reporte de referencia (Fase 5.5) — este
+entorno de desarrollo tiene salida de red restringida a dominios aprobados, así que las pruebas de
+`scrape.py`/`main.py` hechas hasta ahora simulan las respuestas de la FNC y `yfinance` en vez de
+llamarlas de verdad.
