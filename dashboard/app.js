@@ -35,7 +35,7 @@ const state = {
   oicDomain: null, // [Date, Date] — filtra oic-chart y ugq-chart
 };
 
-init();
+document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   try {
