@@ -86,8 +86,35 @@ un dataset y lo publica en un dashboard HTML estático vía GitHub Pages.
     2019-07-01 al 2026-03-31, sin nulos.
   - El archivo real (`data/manual/BD_precios_ICO_actualizada.xlsx`) ya está commiteado en el repo —
     es la carga manual vigente, no un fixture de prueba.
-- **Fases 4 en adelante** (`consolidate.py`, `validate.py`, `main.py`, dashboard, tests, workflow de
-  Actions): pendientes.
+- **Fase 4 (`scripts/consolidate.py` + `scripts/validate.py`)**: hecha, validada contra los archivos
+  reales de OIC y de Precios/Producción de la FNC.
+  - `consolidate()` arma un `ConsolidatedDataset` con:
+    - `serie_diaria`: una fila por fecha de la OIC (2019-07-01 en adelante) con los 5 precios OIC,
+      el **año cafetero** calculado (`compute_ano_cafetero`, regla oct.–sept.) y el **diferencial
+      UGQ** (`Colombian Milds − Contrato C`) cuando hay cotización histórica de Contrato C para esa
+      fecha — si no la hay, queda `None` en esa fila en vez de inventar un valor.
+    - `cotizaciones_actuales`: snapshot de Contrato C / USD-BRL / USD-COP (Fase 2), aparte de la
+      serie diaria — `scrape.py` solo trae el último cierre de esos tickers, no histórico.
+    - `produccion_mensual` y `valor_cosecha` (por año calendario y por año cafetero): parseadas del
+      Excel de Precios de la FNC (`parse_fnc_production`, `parse_fnc_harvest_value`) localizando
+      encabezados por contenido, no por posición fija de fila/columna, para tolerar cambios menores
+      de formato entre publicaciones mensuales de la FNC.
+    - `exportaciones`: **pendiente**, `parse_fnc_exports` lanza `NotImplementedError` a propósito —
+      la FNC publica Exportaciones en un Excel aparte al de Precios y todavía no se compartió un
+      archivo de ejemplo para verificar la estructura de sus hojas.
+  - Se agregó `scrape.fetch_market_quote_history(ticker, start=...)` (histórico diario vía
+    `yfinance`) porque el diferencial UGQ necesita la serie completa de Contrato C, no solo el
+    último cierre que ya traía `fetch_market_quote`.
+  - `validate_dataset()` distingue **crítico** (`DatasetValidationError`: serie diaria vacía, fechas
+    futuras o duplicadas, precios fuera de rango, o una cotización nula que no fue descartada por
+    la regla de las 2pm) de **advertencia** (fuente opcional vacía o cotización descartada por
+    intradía — el pipeline igual publica, con esas advertencias visibles). Fase 5 (`main.py`) debe
+    capturar `DatasetValidationError` y hacer `sys.exit(1)`.
+  - Probado end-to-end con los archivos reales: `parse_fnc_production` (847 filas, 1956–2026-07),
+    `parse_fnc_harvest_value` (26 años calendario, 25 años cafeteros, descartando años futuros sin
+    valor aún), `build_daily_series` (2.466 filas) y ambos niveles de `validate_dataset` (caso
+    feliz + los dos casos críticos).
+- **Fase 5 en adelante** (`main.py`, dashboard, tests, workflow de Actions): pendientes.
 
 dashboard/, tests/ y .github/workflows/ siguen con `.gitkeep` como marcador temporal hasta que se
 agregue su contenido real.
@@ -109,8 +136,8 @@ de la Fase 0 del blueprint:
 | Fuente | Método | Detalle |
 |---|---|---|
 | FNC — Precios y Exportaciones | Scraping (`requests` + `BeautifulSoup`) | Busca en `federaciondecafeteros.org/wp/estadisticas-cafeteras/` el link cuyo `href` matchea "Precios" / "Exportaciones" por regex, descarga el Excel |
-| Producción y valor de cosecha | Lectura de Excel (hojas `9. Producción mensual`, `10. Valor cosecha`) | Del mismo Excel que descarga la FNC |
-| Exportaciones (volumen y valor) | Lectura de Excel (hojas `1. Total_Volumen`, `2. Total_Valor`) | Ídem |
+| Producción y valor de cosecha | Lectura de Excel (`scripts/consolidate.py`) | Del mismo Excel de Precios que descarga la FNC. Hojas confirmadas contra un archivo real: `8. Producción mensual`, `9. Valor cosecha` (el notebook de referencia las numeraba `9.`/`10.` — el número de hoja puede variar entre publicaciones, por eso el parseo busca encabezados por contenido) |
+| Exportaciones (volumen y valor) | Pendiente (`parse_fnc_exports`, sin implementar) | La FNC las publica en un Excel de "Exportaciones" aparte al de Precios; aún no se compartió un archivo de ejemplo para verificar la estructura de las hojas `1. Total_Volumen` / `2. Total_Valor` |
 | OIC (ICO Composite, Colombian Milds, Other Milds, Brazilian Naturals, Robustas) | Excel manual (`scripts/read_excel.py`) | No hay URL de descarga automática identificada para el PDF de la OIC. Estos precios se cargan a mano en `data/manual/BD_precios_ICO_actualizada.xlsx` (2.466 filas, desde 2019-07-01) |
 | Contrato C (café, ICE) | `yfinance`, ticker `KC=F` | Descarta el dato del día si la hora local es antes de las 2pm (mercado sin cerrar) |
 | USD/BRL | `yfinance`, ticker `USDBRL=X` | Misma regla de las 2pm |

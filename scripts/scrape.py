@@ -227,6 +227,44 @@ def fetch_all_market_quotes(*, now: Optional[datetime] = None) -> list[MarketQuo
     return [fetch_market_quote(ticker, label, now=now) for ticker, label in MARKET_TICKERS.items()]
 
 
+def fetch_market_quote_history(
+    ticker: str, *, start: str, label: Optional[str] = None
+) -> list[MarketQuote]:
+    """Obtiene el histórico diario de cierre de `ticker` desde `start` (YYYY-MM-DD) vía yfinance.
+
+    A diferencia de `fetch_market_quote` (última cotización, para el snapshot del dashboard),
+    esta función trae una serie completa — la necesita, por ejemplo, el cálculo del diferencial
+    UGQ (Colombian Milds − Contrato C) sobre toda la serie histórica de la OIC.
+    """
+    import yfinance as yf  # import perezoso: solo se necesita si se llama esta función
+
+    label = label or MARKET_TICKERS.get(ticker, ticker)
+    fetched_at = datetime.utcnow()
+
+    try:
+        history = yf.Ticker(ticker).history(start=start)
+    except Exception as exc:
+        raise SourceUnavailableError(
+            f"No se pudo obtener el histórico de {ticker} ({label}) desde {start}: {exc}"
+        ) from exc
+
+    if history.empty:
+        raise SourceStructureChangedError(
+            f"yfinance no devolvió histórico para {ticker} ({label}) desde {start}."
+        )
+
+    return [
+        MarketQuote(
+            ticker=ticker,
+            label=label,
+            value=float(row["Close"]),
+            quote_date=index.date(),
+            fetched_at=fetched_at,
+        )
+        for index, row in history.iterrows()
+    ]
+
+
 def fetch_oic_prices(*_args, **_kwargs):
     """Pendiente: la OIC no tiene una URL de descarga automática identificada.
 
