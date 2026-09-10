@@ -219,15 +219,40 @@ levantar un servidor backend, basta con abrir el HTML a través de cualquier ser
 tener `data/manual/BD_precios_ICO_actualizada.xlsx` en el repo (ya está commiteado) y conexión a
 internet para la FNC y `yfinance`.
 
+### Corrida real (2026-09-10) — `data/output/dataset.json`
+
+Se corrió `python scripts/main.py` end-to-end contra el Excel real de OIC (commiteado en el repo) y
+se sirvió `dashboard/index.html` con un servidor estático real, verificado en Chromium (sin errores
+de consola, gráficos y stat tiles renderizando bien). Resultado:
+
+- **OIC (fuente crítica)**: éxito — 2.466 filas leídas y consolidadas (2019-07-01 a 2026-03-31), tal
+  como esperaba la Fase 3.
+- **FNC (Precios/Producción/Valor de cosecha) y `yfinance` (Contrato C, USD/BRL, USD/COP)**: el
+  entorno donde se corrió esta vez también tiene salida de red restringida por política de
+  organización (`federaciondecafeteros.org` y `query1.finance.yahoo.com` devuelven 403 en el proxy
+  de salida) — **no** fue posible acceder a las fuentes reales. El pipeline degradó "suave" como
+  está diseñado: siguió sin esas fuentes, dejó las 4 advertencias correspondientes en
+  `dataset.json` y el dashboard las muestra en su banner, en vez de fallar.
+- Intentar disparar el workflow `update-dashboard.yml` (que sí correría en un runner de GitHub con
+  internet real) con `workflow_dispatch` falló con 404: **GitHub solo reconoce workflows presentes
+  en la rama default (`main`)**, y este workflow todavía vive solo en ramas de trabajo, no en
+  `main`. Confirmado también que GitHub Pages sigue en el modo legado ("Deploy from a branch"), no
+  en "GitHub Actions" (ver punto 2 de próximos pasos).
+
+**Conclusión de la Fase 5.5 sigue pendiente**: no se pudo completar la validación contra fuentes de
+red 100% reales de FNC/mercado en ningún entorno de desarrollo probado hasta ahora — hace falta
+correrla desde un runner de GitHub Actions (una vez el workflow esté en `main`) o desde una máquina
+sin esa restricción de salida.
+
 ### Próximos pasos
 
-1. **Fase 5.5 (pendiente, obligatoria antes de activar un cron)**: correr `python scripts/main.py`
-   en un entorno con acceso real a internet y comparar los números del `dataset.json` resultante
-   contra el reporte de referencia. Este entorno de desarrollo tiene salida de red restringida a
-   dominios aprobados, así que todas las pruebas de `scrape.py`/`main.py`/el dashboard hechas hasta
-   ahora simulan las respuestas de la FNC y `yfinance` en vez de llamarlas de verdad.
+1. **Fase 5.5 (pendiente, obligatoria antes de activar un cron)**: fusionar este trabajo a `main`
+   (o al menos el workflow) y correr `update-dashboard.yml` vía `workflow_dispatch` en un runner de
+   GitHub Actions (con acceso real a internet) para comparar los números del `dataset.json`
+   resultante contra el reporte de referencia — ver "Corrida real" arriba.
 2. Configurar **Settings → Pages → Source: GitHub Actions** en el repositorio (ajuste manual, una
-   sola vez) para que el workflow de la Fase 6 pueda desplegar.
+   sola vez) para que el workflow de la Fase 6 pueda desplegar — sigue en modo "Deploy from a
+   branch" (confirmado en la corrida de arriba).
 3. Confirmar con el equipo la selección de KPIs del dashboard (Fase 7) y el Excel de Exportaciones
    de la FNC (para completar `parse_fnc_exports`, pendiente desde la Fase 4).
 4. Una vez validada la Fase 5.5, agregar el trigger `schedule` al workflow (una línea) con la
