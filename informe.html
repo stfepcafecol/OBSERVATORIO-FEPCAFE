@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observatorio Cafetero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --navy:#304c75;
+    --forest:#3c815d;
+    --forest-light:#79a889;
+    --pale-green:#cbddd1;
+    --olive:#76a458;
+    --cream:#f8f2ec;
+    --lavender:#90a4d7;
+    --red:#ff3131;
+    --red-dark:#96252b;
+    --peach:#fdc29d;
+    --orange:#f79150;
+    --tan-light:#e8d5c5;
+    --olive2:#99ad1b;
+    --olive-dark:#5d6b11;
+    --yellow:#ffde59;
+    --brown:#a37441;
+    --tan:#c39d70;
+    --mauve:#d0bbbf;
+    --white:#ffffff;
+    --surface:#ffffff;
+    --bg:#f8f2ec;
+    --ink:#22344f;
+    --ink-muted:#5b6b82;
+    --border: rgba(48,76,117,.14);
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'IBM Plex Sans', 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--ink); font-family:var(--font-body); margin:0;}
+  h1,h2,h3{text-wrap:balance;}
+  .page{max-width:1360px; margin:0 auto; padding:0 20px 72px;}
+
+  .masthead{background:var(--navy); color:var(--white); margin:0 -20px 36px; padding:22px 20px 24px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:center; gap:13px;}
+  .brand-mark{width:42px; height:42px; border-radius:11px; background:var(--forest-light);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .brand-text .eyebrow{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:rgba(255,255,255,.72); font-weight:600;}
+  .brand-text h1{font-family:var(--font-display); font-size:23px; margin:3px 0 0; font-weight:600; color:var(--white);}
+  .period-chip{background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.3); border-radius:999px;
+    padding:7px 16px; font-size:13px; font-weight:600; letter-spacing:.02em; color:var(--white); white-space:nowrap;}
+
+  .section{margin-top:46px;}
+  .section-head{display:flex; align-items:baseline; gap:14px; margin-bottom:18px; border-bottom:2px solid var(--border); padding-bottom:10px;}
+  .section-num{font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--forest); letter-spacing:.03em;}
+  .section-head h2{font-family:var(--font-display); font-size:25px; margin:0; color:var(--navy); font-weight:600;}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 24px;
+    box-shadow:0 1px 2px rgba(34,52,79,.06); margin-bottom:20px;}
+  .panel-eyebrow{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-muted); font-weight:700; margin:0 0 4px;}
+  .panel-title{font-family:var(--font-display); font-size:18px; color:var(--navy); margin:0 0 16px; font-weight:600;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px;}
+  .kpi-card{border:1px solid var(--border); border-left:4px solid var(--navy); border-radius:10px; padding:16px 18px; background:var(--cream);}
+  .kpi-label{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--navy); margin:0;}
+  .kpi-sub{font-size:12px; color:var(--ink-muted); margin:3px 0 12px; line-height:1.35;}
+  .kpi-value-row{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;}
+  .kpi-value{font-family:var(--font-display); font-size:27px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .kpi-unit{font-size:12px; color:var(--ink-muted); white-space:nowrap;}
+  .kpi-var{font-size:13px; font-weight:700; white-space:nowrap;}
+  .kpi-var.pos{color:var(--forest);}
+  .kpi-var.neg{color:var(--red-dark);}
+  .kpi-range{font-size:11.5px; color:var(--ink-muted); margin-top:9px; font-variant-numeric:tabular-nums;}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:760px){ .grid-2{grid-template-columns:1fr;} }
+
+  .chart-box{position:relative; width:100%; height:258px;}
+  .chart-box.tall{height:320px;}
+  .chart-box.short{height:230px;}
+
+  .legend-row{display:flex; flex-wrap:wrap; gap:16px; margin-top:14px; font-size:12px; color:var(--ink-muted);}
+  .legend-chip{display:inline-flex; align-items:center; gap:6px;}
+  .legend-swatch{width:10px; height:10px; border-radius:3px; display:inline-block; flex-shrink:0;}
+
+  .table-scroll{overflow-x:auto;}
+  table.report-table{width:100%; border-collapse:collapse; font-size:13px; min-width:460px;}
+  table.report-table th{background:var(--navy); color:var(--white); text-align:left; padding:10px 10px; font-weight:600;
+    font-size:11px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap;}
+  table.report-table td{padding:10px 10px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  table.report-table tbody tr:nth-child(even){background:var(--cream);}
+  table.report-table tr.total-row{font-weight:700; background:var(--pale-green) !important;}
+  .val-pos{color:var(--forest); font-weight:600;}
+  .val-neg{color:var(--red-dark); font-weight:600;}
+
+  table.heat-table{border-collapse:collapse; font-size:12.5px; text-align:center; width:100%; min-width:640px;}
+  table.heat-table th{background:var(--navy); color:var(--white); padding:8px 10px; font-weight:600; white-space:nowrap;}
+  table.heat-table td{padding:8px 10px; font-weight:600; color:var(--ink);}
+  table.heat-table td.axis{background:var(--forest); color:var(--white);}
+  .heat-scale{display:flex; align-items:center; gap:10px; margin-top:14px; font-size:11.5px; color:var(--ink-muted);}
+  .heat-bar{flex:1; height:8px; border-radius:4px; background:linear-gradient(to right, var(--pale-green), var(--forest)); max-width:280px;}
+
+  table.blank-table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:360px;}
+  table.blank-table th{background:var(--navy); color:var(--white); padding:10px 12px; font-weight:600; text-align:center; font-size:12px;}
+  table.blank-table td{padding:15px 12px; text-align:center; color:var(--ink-muted); border-bottom:1px solid var(--border);}
+  table.blank-table tbody tr:nth-child(even){background:var(--cream);}
+  table.blank-table td:first-child{text-align:left; color:var(--ink); font-weight:600;}
+
+  .two-col{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr); gap:20px; align-items:stretch;}
+  @media (max-width:840px){ .two-col{grid-template-columns:1fr;} }
+  .two-col .panel{margin-bottom:0;}
+
+  @media (max-width:480px){
+    .masthead{padding:18px 16px 20px;}
+    .panel{padding:18px 16px;}
+    .brand-text h1{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M4 9h13a3 3 0 0 1 0 6h-1" stroke="#22344f" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" stroke="#22344f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 3.5c-.6.9-.6 1.5 0 2.4M11 3.5c-.6.9-.6 1.5 0 2.4" stroke="#22344f" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="eyebrow">Fondo de Estabilización de Precios</div>
+        <h1>Observatorio Cafetero &middot; Informe Mensual</h1>
+      </div>
+    </div>
+    <div class="period-chip">Período de referencia: Julio 2026</div>
+  </header>
+
+  <!-- ============ SECCIÓN 1: PRECIO INTERNO ============ -->
+  <section class="section" id="precio-interno">
+    <div class="section-head"><span class="section-num">01</span><h2>Precio Interno</h2></div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Indicador principal</div>
+      <div class="panel-title">Descomposición del precio interno de referencia</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <p class="kpi-label">Precio Interno del Café</p>
+          <p class="kpi-sub">Precio de referencia del FoNC &middot; COP/Carga 125 Kg CPS</p>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiPrecioInternoValor">—</span>
+            <span class="kpi-unit">COP</span>
+            <span class="kpi-var" id="kpiPrecioInternoVar">—</span>
+          </div>
+          <div class="kpi-range" id="kpiPrecioInternoRango">—</div>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Contrato C</p>
+          <p class="kpi-sub">Precio internacional de los cafés arábicas, ICE</p>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiContratoCValor">—</span>
+            <span class="kpi-unit">cts/lb</span>
+            <span class="kpi-var" id="kpiContratoCVar">—</span>
+          </div>
+          <div class="kpi-range" id="kpiContratoCRango">—</div>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Diferencial UGQ</p>
+          <p class="kpi-sub">Prima de calidad para el café de Colombia</p>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiDiferencialValor">—</span>
+            <span class="kpi-unit">cts/lb</span>
+            <span class="kpi-var" id="kpiDiferencialVar">—</span>
+          </div>
+          <div class="kpi-range" id="kpiDiferencialRango">—</div>
+        </div>
+        <div class="kpi-card">
+          <p class="kpi-label">Tasa de Cambio</p>
+          <p class="kpi-sub">Peso colombiano frente al dólar, USD/COP</p>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiTrmValor">—</span>
+            <span class="kpi-unit">COP/USD</span>
+            <span class="kpi-var" id="kpiTrmVar">—</span>
+          </div>
+          <div class="kpi-range" id="kpiTrmRango">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-eyebrow">Serie de tiempo</div>
+        <div class="panel-title">Precio Interno del Café</div>
+        <div class="chart-box"><canvas id="chPrecioInterno"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Serie de tiempo</div>
+        <div class="panel-title">Contrato C &middot; ICE</div>
+        <div class="chart-box"><canvas id="chContratoC"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Serie de tiempo</div>
+        <div class="panel-title">Diferencial UGQ</div>
+        <div class="chart-box"><canvas id="chDiferencial"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Serie de tiempo</div>
+        <div class="panel-title">Tasa de Cambio (TRM)</div>
+        <div class="chart-box"><canvas id="chTrm"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Descomposición del Precio Interno de Referencia [Var. mensual]</div>
+      <div class="chart-box tall"><canvas id="chDescomposicion"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Variaciones en la TRM y el Contrato C</div>
+      <div class="panel-title">Análisis de Sensibilidad del Precio Interno de Referencia</div>
+      <div class="table-scroll" id="heatmapContainer"></div>
+      <div class="heat-scale">
+        <span>Bajo</span>
+        <div class="heat-bar"></div>
+        <span>Alto</span>
+        <span style="font-style:italic;">&nbsp;COP/carga (miles)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 2: PRODUCCIÓN ============ -->
+  <section class="section" id="produccion">
+    <div class="section-head"><span class="section-num">02</span><h2>Producción</h2></div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Miles de sacos 60 kg</div>
+      <div class="panel-title">Producción colombiana de café (Acumulado 12 meses)</div>
+      <div class="chart-box tall"><canvas id="chAcumulado12"></canvas></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-eyebrow">Miles de sacos 60 kg</div>
+        <div class="panel-title">Producción mensual de café (Últimos 10 años del mes de referencia)</div>
+        <div class="chart-box"><canvas id="chMensual10"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Miles de sacos 60 kg</div>
+        <div class="panel-title">Producción colombiana de café [Año cafetero] (Acumulado 1 Mes)</div>
+        <div class="chart-box"><canvas id="chAnioCafetero"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel" style="background:var(--navy); border:none;">
+      <div class="panel-eyebrow" style="color:rgba(255,255,255,.72);">Condiciones</div>
+      <div class="panel-title" style="color:var(--white); margin-bottom:0;">Condición Agroclimática y Fitosanitaria</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Serie mensual</div>
+      <div class="panel-title">Índice Oceánico Relativo El Niño (RONI)</div>
+      <div class="legend-row" style="margin-top:0; margin-bottom:10px;">
+        <span class="legend-chip"><span class="legend-swatch" style="background:var(--red);"></span>El Niño (&gt; 0.5)</span>
+        <span class="legend-chip"><span class="legend-swatch" style="background:var(--lavender);"></span>La Niña (&lt; -0.5)</span>
+      </div>
+      <div class="chart-box tall"><canvas id="chRoni"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Con intervalos de confianza P25&ndash;P75</div>
+      <div class="panel-title">Pronóstico del Índice Oceánico Relativo El Niño</div>
+      <div class="chart-box tall"><canvas id="chRoniForecast"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 3: COSTO MEDIO DE PRODUCCIÓN ============ -->
+  <section class="section" id="costo-medio">
+    <div class="section-head"><span class="section-num">03</span><h2>Costo Medio de Producción</h2></div>
+
+    <div class="panel" style="background:var(--navy); border:none; color:var(--white);">
+      <div class="panel-eyebrow" style="color:rgba(255,255,255,.72);">Indicador principal</div>
+      <div style="font-size:13px; color:rgba(255,255,255,.85); margin-bottom:10px;">
+        Costo Medio de Producción &middot; COP por Carga &ndash; 125 Kg C.P.S.
+      </div>
+      <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+        <span style="font-family:var(--font-display); font-size:34px; font-weight:600; font-variant-numeric:tabular-nums;">$ 1.643.450</span>
+        <span style="background:rgba(255,255,255,.16); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700;">+1,5% mes</span>
+        <span style="background:var(--forest-light); color:var(--navy); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:700;">+8,2% año</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-eyebrow">Serie de tiempo &middot; COP/carga</div>
+        <div class="panel-title">Costo Medio de Producción</div>
+        <div class="chart-box"><canvas id="chCostoMedio"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Distribución porcentual</div>
+        <div class="panel-title">Estructura del Costo de Producción</div>
+        <div class="chart-box"><canvas id="chEstructuraPie"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Distribución por componente (%)</div>
+        <div class="panel-title">Estructura Detallada de Costos</div>
+        <div class="chart-box tall"><canvas id="chEstructuraBar"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Herbicidas &middot; Fungicidas &middot; Fertilizantes</div>
+        <div class="panel-title">Evolución de Precios de Insumos</div>
+        <div class="chart-box tall"><canvas id="chInsumos"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 4: ÍNDICES DE PRECIOS ============ -->
+  <section class="section" id="indices-precios">
+    <div class="section-head"><span class="section-num">04</span><h2>Índices de Precios</h2></div>
+
+    <div class="panel" style="background:var(--navy); border:none;">
+      <div class="panel-eyebrow" style="color:rgba(255,255,255,.72);">Inflación</div>
+      <div class="panel-title" style="color:var(--white); margin-bottom:0;">
+        Variación anual índice de precios a julio 2026: (a) Consumidor y (b) Productor
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-eyebrow">Variación anual % &middot; Julio 2026</div>
+        <div class="panel-title">(a) Índice de Precios al Consumidor (IPC)</div>
+        <div class="chart-box tall"><canvas id="chIpc"></canvas></div>
+        <div class="legend-row" id="legendIpc"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Variación anual % &middot; Julio 2026</div>
+        <div class="panel-title">(b) Índice de Precios al Productor (IPP)</div>
+        <div class="chart-box tall"><canvas id="chIpp"></canvas></div>
+        <div class="legend-row" id="legendIpp"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 5: MECANISMO PAI ============ -->
+  <section class="section" id="mecanismo-pai">
+    <div class="section-head"><span class="section-num">05</span><h2>Mecanismo PAI</h2></div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-eyebrow">Mecanismo PAI</div>
+        <div class="panel-title">Variación del Precio de Fertilizantes de Referencia para Café</div>
+        <div class="table-scroll">
+          <table class="report-table">
+            <thead>
+              <tr><th>Fertilizante</th><th>Precio Promedio</th><th>Var. (%) Mes</th><th>Var. (%) Anual</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>17-6-18-2</td><td>$ 1.842.000</td><td class="val-neg">-1,2%</td><td class="val-pos">+8,4%</td></tr>
+              <tr><td>25-4-24</td><td>$ 2.104.000</td><td class="val-pos">+0,8%</td><td class="val-pos">+12,1%</td></tr>
+              <tr><td>KCL</td><td>$ 1.365.000</td><td class="val-pos">+2,3%</td><td class="val-pos">+5,7%</td></tr>
+              <tr><td>DAP</td><td>$ 1.980.000</td><td class="val-neg">-0,5%</td><td class="val-pos">+9,2%</td></tr>
+              <tr><td>Urea</td><td>$ 1.620.000</td><td class="val-pos">+1,1%</td><td class="val-pos">+6,8%</td></tr>
+              <tr><td>23-4-20-3</td><td>$ 1.756.000</td><td class="val-neg">-0,3%</td><td class="val-pos">+7,5%</td></tr>
+              <tr><td>26-4-22</td><td>$ 1.890.000</td><td class="val-pos">+0,6%</td><td class="val-pos">+11,0%</td></tr>
+              <tr class="total-row"><td>Promedio</td><td>$ 1.794.000</td><td class="val-pos">+0,4%</td><td class="val-pos">+8,7%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">Últimos 48 meses &middot; COP</div>
+        <div class="panel-title">Evolución precios fertilizantes de referencia</div>
+        <div class="chart-box tall"><canvas id="chFertilizantes"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-eyebrow">Programa de Apoyo a la Inversión</div>
+      <div class="panel-title">Indicadores de Costo de la Fertilización</div>
+      <div class="table-scroll">
+        <table class="blank-table">
+          <thead>
+            <tr><th></th><th>Área en Renovación (40%)</th><th>Área en Producción (30%)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Costo Fertilización Ha/Año</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td>Incentivo por Ha</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td>Bono por Equidad (5%)</td><td>&mdash;</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 6: MECANISMO MECIC ============ -->
+  <section class="section" id="mecanismo-mecic">
+    <div class="section-head"><span class="section-num">06</span><h2>Mecanismo MeCIC</h2></div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-eyebrow">Mecanismo MeCIC</div>
+        <div class="panel-title">Tabla de referencia</div>
+        <div class="table-scroll">
+          <table class="blank-table">
+            <tbody>
+              <tr><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-eyebrow">COP/Carga</div>
+        <div class="panel-title">Sistema de Alertas Mecanismo MeCIC</div>
+        <div class="chart-box tall"><canvas id="chMecic"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- palette & chart defaults ---------- */
+  var PAL = {
+    navy:'#304c75', forest:'#3c815d', forestLight:'#79a889', paleGreen:'#cbddd1',
+    olive:'#76a458', cream:'#f8f2ec', lavender:'#90a4d7', red:'#ff3131',
+    redDark:'#96252b', peach:'#fdc29d', orange:'#f79150', tanLight:'#e8d5c5',
+    olive2:'#99ad1b', oliveDark:'#5d6b11', yellow:'#ffde59', brown:'#a37441',
+    tan:'#c39d70', mauve:'#d0bbbf', white:'#ffffff', ink:'#22344f', inkMuted:'#5b6b82'
+  };
+
+  Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+  Chart.defaults.color = PAL.inkMuted;
+  Chart.defaults.elements.line.borderWidth = 2.25;
+  Chart.defaults.elements.point.radius = 0;
+  Chart.defaults.elements.point.hoverRadius = 4;
+  Chart.defaults.elements.point.hitRadius = 6;
+
+  /* ---------- deterministic RNG & helpers ---------- */
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function monthRange(startYear, startMonth0, count){
+    var out = [], y = startYear, m = startMonth0;
+    for (var i = 0; i < count; i++){
+      out.push((m + 1 < 10 ? '0' : '') + (m + 1) + '/' + y);
+      m++; if (m > 11){ m = 0; y++; }
+    }
+    return out;
+  }
+  function round(n, d){ d = d || 0; var f = Math.pow(10, d); return Math.round(n * f) / f; }
+  function esCO(n){ return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(n)); }
+  function coma(n, d){ return n.toFixed(d).replace('.', ','); }
+  function smoothSeries(n, base, amp, phase, trend, noiseFrac, rng){
+    var out = [];
+    for (var i = 0; i < n; i++){
+      out.push(base + amp * Math.sin(i / 6 + phase) + trend * i + (rng() - 0.5) * base * noiseFrac);
+    }
+    return out;
+  }
+  function thinTicks(labels, maxTicks, forceStep){
+    var step = forceStep || Math.max(1, Math.ceil(labels.length / maxTicks));
+    return { autoSkip: false, callback: function(val, idx){ return idx % step === 0 ? labels[idx] : ''; }, maxRotation: 0, minRotation: 0, font: { size: 10.5 } };
+  }
+
+  var moneyShort = function(v){
+    if (Math.abs(v) >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+    return '$' + Math.round(v/1000) + 'k';
+  };
+
+  function baseOptions(labels, opts){
+    opts = opts || {};
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 14, top: 6 } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: opts.legend !== false,
+          position: 'bottom',
+          labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14, font: { size: 11 }, color: PAL.inkMuted, filter: opts.legendFilter }
+        },
+        tooltip: {
+          backgroundColor: PAL.ink, padding: 10, cornerRadius: 6,
+          titleFont: { size: 12, weight: '600' }, bodyFont: { size: 12 },
+          callbacks: opts.tooltipCallbacks
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: thinTicks(labels, opts.xTicks || 8, opts.xStep) },
+        y: {
+          beginAtZero: !!opts.beginAtZero,
+          stacked: !!opts.stackedY,
+          min: opts.yMin, max: opts.yMax,
+          grid: { color: 'rgba(34,52,79,.08)' },
+          ticks: { font: { size: 10.5 }, callback: opts.yFormat }
+        }
+      }
+    };
+  }
+
+  function lineChart(id, labels, datasets, opts){
+    return new Chart(document.getElementById(id), { type: 'line', data: { labels: labels, datasets: datasets }, options: baseOptions(labels, opts) });
+  }
+  function barChart(id, labels, datasets, opts){
+    opts = opts || {};
+    var o = baseOptions(labels, opts);
+    if (opts.stackedX){ o.scales.x.stacked = true; o.scales.y.stacked = true; }
+    return new Chart(document.getElementById(id), { type: 'bar', data: { labels: labels, datasets: datasets }, options: o });
+  }
+  function hBarChart(id, labels, values, colors, opts){
+    opts = opts || {};
+    var o = {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: PAL.ink, padding: 10, cornerRadius: 6, callbacks: opts.tooltipCallbacks } },
+      scales: {
+        x: { grid: { color: 'rgba(34,52,79,.08)' }, ticks: { font: { size: 10.5 }, callback: opts.xFormat } },
+        y: { grid: { display: false }, ticks: { font: { size: 11.5 } } }
+      }
+    };
+    return new Chart(document.getElementById(id), { type: 'bar', data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, barThickness: 16 }] }, options: o });
+  }
+  function pieChart(id, labels, values, colors){
+    return new Chart(document.getElementById(id), {
+      type: 'pie',
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderColor: PAL.white, borderWidth: 2 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14, font: { size: 11.5 }, color: PAL.inkMuted } },
+          tooltip: { backgroundColor: PAL.ink, padding: 10, cornerRadius: 6, callbacks: { label: function(ctx){ return ctx.label + ': ' + ctx.parsed + '%'; } } }
+        }
+      }
+    });
+  }
+
+  /* =====================================================================
+     SECCIÓN 1 · PRECIO INTERNO
+     ===================================================================== */
+  (function(){
+    var rng = mulberry32(11);
+    var months = monthRange(2022, 0, 55); // 01/2022 .. 07/2026
+
+    var precioInterno = smoothSeries(55, 950000, 80000, 0.4, 3000, 0.03, rng);
+    var contratoC     = smoothSeries(55, 200, 20, 1.2, 0.15, 0.03, rng);
+    var diferencial   = smoothSeries(55, 20, 6, 2.1, 0.02, 0.12, rng);
+    var trm           = smoothSeries(55, 4000, 150, 0.8, 1.4, 0.02, rng);
+
+    function buildKpi(baseline, volFrac, decimals){
+      var dias = 22, v = baseline, serie = [v];
+      for (var i = 1; i < dias; i++){ v = v * (1 + (rng() - 0.5) * volFrac); serie.push(v); }
+      var valor = serie[serie.length - 1];
+      return {
+        valor: round(valor, decimals),
+        min: round(Math.min.apply(null, serie), decimals),
+        max: round(Math.max.apply(null, serie), decimals),
+        varPct: round(((valor - serie[0]) / serie[0]) * 100, 1)
+      };
+    }
+
+    var kPrecio = buildKpi(precioInterno[53], 0.025, 0); precioInterno[54] = kPrecio.valor;
+    var kContrato = buildKpi(contratoC[53], 0.03, 1); contratoC[54] = kContrato.valor;
+    var kDiferencial = buildKpi(diferencial[53], 0.1, 1); diferencial[54] = kDiferencial.valor;
+    var kTrm = buildKpi(trm[53], 0.015, 0); trm[54] = kTrm.valor;
+
+    function fillKpi(prefix, k, opts){
+      opts = opts || {};
+      document.getElementById(prefix + 'Valor').textContent = opts.money ? ('$ ' + esCO(k.valor)) : (opts.plus ? '+' : '') + coma(k.valor, 1);
+      var varEl = document.getElementById(prefix + 'Var');
+      varEl.textContent = '(' + (k.varPct >= 0 ? '+' : '') + coma(k.varPct, 1) + '%)';
+      varEl.className = 'kpi-var ' + (k.varPct >= 0 ? 'pos' : 'neg');
+      var rangeText = opts.money
+        ? 'Mín: $ ' + esCO(k.min) + '&nbsp;&nbsp;&nbsp;Máx: $ ' + esCO(k.max)
+        : 'Mín: ' + coma(k.min, 1) + '&nbsp;&nbsp;&nbsp;Máx: ' + coma(k.max, 1);
+      document.getElementById(prefix + 'Rango').innerHTML = rangeText;
+    }
+    fillKpi('kpiPrecioInterno', kPrecio, { money: true });
+    fillKpi('kpiContratoC', kContrato, {});
+    fillKpi('kpiDiferencial', kDiferencial, { plus: true });
+    fillKpi('kpiTrm', kTrm, { money: true });
+
+    lineChart('chPrecioInterno', months, [{ data: precioInterno, borderColor: PAL.navy, backgroundColor: PAL.navy, fill: false, tension: .35 }],
+      { legend: false, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return '$ ' + esCO(c.parsed.y); } } });
+    lineChart('chContratoC', months, [{ data: contratoC, borderColor: PAL.forest, backgroundColor: PAL.forest, fill: false, tension: .35 }],
+      { legend: false, tooltipCallbacks: { label: function(c){ return coma(c.parsed.y,1) + ' cts/lb'; } } });
+    lineChart('chDiferencial', months, [{ data: diferencial, borderColor: PAL.olive, backgroundColor: PAL.olive, fill: false, tension: .35 }],
+      { legend: false, tooltipCallbacks: { label: function(c){ return coma(c.parsed.y,1) + ' cts/lb'; } } });
+    lineChart('chTrm', months, [{ data: trm, borderColor: PAL.lavender, backgroundColor: PAL.lavender, fill: false, tension: .35 }],
+      { legend: false, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return '$ ' + esCO(c.parsed.y); } } });
+
+    /* Descomposición mensual [Var.] */
+    var rngD = mulberry32(23);
+    var decompMonths = monthRange(2025, 2, 17); // 03/2025 .. 07/2026
+    var efContratoC = decompMonths.map(function(){ return round((rngD() - 0.45) * 45000); });
+    var efDiferencial = decompMonths.map(function(){ return round((rngD() - 0.5) * 12000); });
+    var efTrm = decompMonths.map(function(){ return round((rngD() - 0.45) * 15000); });
+
+    barChart('chDescomposicion', decompMonths, [
+      { label: 'Efecto Contrato C', data: efContratoC, backgroundColor: PAL.navy, borderRadius: 2 },
+      { label: 'Efecto Diferencial', data: efDiferencial, backgroundColor: PAL.forestLight, borderRadius: 2 },
+      { label: 'Efecto TRM', data: efTrm, backgroundColor: PAL.forest, borderRadius: 2 }
+    ], { stackedX: true, xTicks: 17, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': $ ' + esCO(c.parsed.y); } } });
+
+    /* Heatmap de sensibilidad KC x TRM */
+    var rngH = mulberry32(31);
+    var KC = [170,180,190,200,210,220,230];
+    var TRM = [3800,3900,4000,4100,4200,4300,4400,4500];
+    var matrix = KC.map(function(kc){
+      return TRM.map(function(trmV){
+        var base = (kc * trmV) / 46000;
+        return Math.max(3, Math.round(base + (rngH() - 0.5) * 6));
+      });
+    });
+    var flat = [].concat.apply([], matrix);
+    var vMin = Math.min.apply(null, flat), vMax = Math.max.apply(null, flat);
+    function heatColor(v){
+      var t = (v - vMin) / (vMax - vMin || 1);
+      var from = [203, 221, 209], to = [60, 129, 93];
+      var mix = from.map(function(c, i){ return Math.round(c + (to[i] - c) * t); });
+      return 'rgb(' + mix.join(',') + ')';
+    }
+    var html = '<table class="heat-table"><thead><tr><th>KC \\ TRM</th>' +
+      TRM.map(function(t){ return '<th>' + t.toLocaleString('es-CO') + '</th>'; }).join('') + '</tr></thead><tbody>';
+    KC.forEach(function(kc, ri){
+      html += '<tr><td class="axis">' + kc + '</td>' +
+        matrix[ri].map(function(v){ return '<td style="background:' + heatColor(v) + '">' + v + 'k</td>'; }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('heatmapContainer').innerHTML = html;
+  })();
+
+  /* =====================================================================
+     SECCIÓN 2 · PRODUCCIÓN
+     ===================================================================== */
+  (function(){
+    var COSECHA = ['Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep'];
+    var rng = mulberry32(101);
+
+    function buildAcum(base, amp, phase, noise){
+      return COSECHA.map(function(_, i){ return round(base + amp * Math.sin((i/12)*Math.PI*2 + phase) + (rng()-0.5)*noise); });
+    }
+    var y2022 = buildAcum(13000, 900, 0.6, 300);
+    var y2023 = buildAcum(12200, 700, 1.4, 300);
+    var y2024 = buildAcum(12300, 700, 2.2, 300);
+    var y2025 = buildAcum(11900, 500, -1.0, 250);
+    var y2026 = buildAcum(12200, 300, 3.0, 200).slice(0, 10);
+    function pad(arr){ return COSECHA.map(function(_, i){ return i < arr.length ? arr[i] : null; }); }
+
+    lineChart('chAcumulado12', COSECHA, [
+      { label: '2022', data: y2022, borderColor: PAL.navy, backgroundColor: PAL.navy, tension: .35 },
+      { label: '2023', data: y2023, borderColor: PAL.forest, backgroundColor: PAL.forest, tension: .35 },
+      { label: '2024', data: y2024, borderColor: PAL.forestLight, backgroundColor: PAL.forestLight, tension: .35 },
+      { label: '2025', data: y2025, borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .35 },
+      { label: '2026', data: pad(y2026), borderColor: PAL.lavender, backgroundColor: PAL.lavender, tension: .35, spanGaps: false }
+    ], { xTicks: 12, yMin: 10000, yMax: 15000, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': ' + esCO(c.parsed.y) + ' mil sacos'; } } });
+
+    var meses10 = monthRange(2016, 7, 121); // 08/2016 .. 08/2026
+    var prodMensual = meses10.map(function(_, i){
+      var monthIdx = (7 + i) % 12;
+      var trend = i < 82 ? 500 + i * 3 : 750 + (i - 82) * 11;
+      var estacional = 200 * Math.sin((monthIdx/12)*Math.PI*2 + 1.2);
+      return Math.max(250, round(trend + estacional + (rng()-0.5)*120));
+    });
+    barChart('chMensual10', meses10, [{ data: prodMensual, backgroundColor: PAL.forest, borderRadius: 2 }],
+      { legend: false, xStep: 12, tooltipCallbacks: { label: function(c){ return esCO(c.parsed.y) + ' mil sacos'; } } });
+
+    function buildAnio(base, dip, noise){
+      return COSECHA.map(function(_, i){ return round(base - dip*Math.cos((i/11)*Math.PI) + (rng()-0.5)*noise); });
+    }
+    var a2223 = buildAnio(950, 220, 40);
+    var a2324 = buildAnio(920, 200, 40);
+    var a2425 = buildAnio(950, 210, 40);
+    var a2526 = buildAnio(880, 0, 20).slice(0, 10);
+    lineChart('chAnioCafetero', COSECHA, [
+      { label: '2022-23', data: a2223, borderColor: PAL.navy, backgroundColor: PAL.navy, tension: .35 },
+      { label: '2023-24', data: a2324, borderColor: PAL.forest, backgroundColor: PAL.forest, tension: .35 },
+      { label: '2024-25', data: a2425, borderColor: PAL.forestLight, backgroundColor: PAL.forestLight, tension: .35 },
+      { label: '2025-26', data: pad(a2526), borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .35, spanGaps: false }
+    ], { xTicks: 12, yMin: 600, yMax: 1200, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': ' + esCO(c.parsed.y) + ' mil sacos'; } } });
+
+    var rng2 = mulberry32(202);
+    var roniMeses = monthRange(2016, 8, 119); // 09/2016 .. 07/2026
+    var roniVals = roniMeses.map(function(_, i){
+      var ninoHump = 3.6 * Math.exp(-Math.pow((i-50)/10, 2));
+      var minorHump = 1.2 * Math.exp(-Math.pow((i-100)/6, 2));
+      var base = 0.4 * Math.sin(i/14) + (rng2()-0.5)*0.5;
+      return round(ninoHump + minorHump + base, 2);
+    });
+    barChart('chRoni', roniMeses, [{
+      data: roniVals,
+      backgroundColor: roniVals.map(function(v){ return v > 0.5 ? PAL.redDark : (v < -0.5 ? PAL.lavender : PAL.navy); }),
+      borderRadius: 1
+    }], { legend: false, xStep: 12, yMin: -2.5, yMax: 4.2 });
+
+    var rng3 = mulberry32(303);
+    var fMeses = monthRange(2023, 0, 44); // 01/2023 .. 08/2026
+    var CUTOFF = 30;
+    var observado = [], p50 = [], p25 = [], p75 = [];
+    for (var i = 0; i < fMeses.length; i++){
+      var hump = 0.7 * Math.exp(-Math.pow((i-12)/8, 2));
+      var rising = i > 32 ? (i-32) * 0.08 : 0;
+      var v50 = 0.1 + hump + rising + (rng3()-0.5)*0.15;
+      var band = 0.35 + (i > 32 ? (i-32)*0.02 : 0);
+      observado.push(i <= CUTOFF ? round(v50,2) : null);
+      p50.push(i >= CUTOFF ? round(v50,2) : null);
+      p25.push(i >= CUTOFF ? round(v50-band,2) : null);
+      p75.push(i >= CUTOFF ? round(v50+band,2) : null);
+    }
+    lineChart('chRoniForecast', fMeses, [
+      { label: 'P25', data: p25, borderColor: 'transparent', backgroundColor: 'transparent', fill: false, pointRadius: 0 },
+      { label: 'P75', data: p75, borderColor: 'transparent', backgroundColor: 'rgba(121,168,137,.32)', fill: '-1', pointRadius: 0 },
+      { label: 'Observado', data: observado, borderColor: PAL.navy, backgroundColor: PAL.navy, fill: false, tension: .3 },
+      { label: 'Pronóstico P50', data: p50, borderColor: PAL.navy, backgroundColor: PAL.navy, borderDash: [6,4], fill: false, tension: .3 }
+    ], {
+      xTicks: 11, yMin: -2, yMax: 2,
+      legendFilter: function(item){ return item.text !== 'P25' && item.text !== 'P75'; },
+      tooltipCallbacks: { label: function(c){ return (c.dataset.label === 'P25' || c.dataset.label === 'P75') ? null : c.dataset.label + ': ' + c.parsed.y; } }
+    });
+  })();
+
+  /* =====================================================================
+     SECCIÓN 3 · COSTO MEDIO DE PRODUCCIÓN
+     ===================================================================== */
+  (function(){
+    var rng = mulberry32(404);
+    var meses = monthRange(2019, 0, 91); // 01/2019 .. 07/2026
+    var costoMedio = meses.map(function(_, i){ return round(1150000 + i*5200 + (rng()-0.5)*30000); });
+    costoMedio[costoMedio.length-1] = 1643450;
+
+    lineChart('chCostoMedio', meses, [{ data: costoMedio, borderColor: PAL.navy, backgroundColor: PAL.navy, fill: false, tension: .3 }],
+      { legend: false, xTicks: 9, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return '$ ' + esCO(c.parsed.y); } } });
+
+    pieChart('chEstructuraPie', ['Mano de obra', 'Insumos', 'Adm. y Generales'], [69, 25, 6], [PAL.forest, PAL.forestLight, PAL.paleGreen]);
+
+    var comp = [
+      ['Recolección', 52.1], ['Nutrición', 18.6], ['Instalación', 9.4], ['Admón-Grales', 6.1],
+      ['Manejo Arvenses', 7.2], ['Beneficio', 5.0], ['Control Fitos.', 1.2], ['Reg. Sombrío', 0.2], ['Otras', 0.2]
+    ];
+    var compColors = [PAL.forest, PAL.forestLight, PAL.olive, PAL.olive2, PAL.paleGreen, PAL.brown, PAL.tan, PAL.tanLight, PAL.mauve];
+    hBarChart('chEstructuraBar', comp.map(function(r){ return r[0]; }), comp.map(function(r){ return r[1]; }), compColors,
+      { xFormat: function(v){ return v + '%'; }, tooltipCallbacks: { label: function(c){ return c.parsed.x + '%'; } } });
+
+    var mesesIns = monthRange(2020, 0, 79); // 01/2020 .. 07/2026
+    var rng2 = mulberry32(505);
+    var fert = [], fung = [], herb = [];
+    for (var i = 0; i < mesesIns.length; i++){
+      var decay = Math.max(0, 1 - i/80);
+      fert.push(round(20000 + 25000*decay*(0.6+0.4*Math.sin(i/6)) + (rng2()-0.5)*3000));
+      fung.push(round(14000 + 6000*Math.sin(i/8+1) + (rng2()-0.5)*2500));
+      herb.push(Math.max(3000, round(13000 + 5000*Math.sin(i/7+2) - i*18 + (rng2()-0.5)*2500)));
+    }
+    lineChart('chInsumos', mesesIns, [
+      { label: 'Fertilizantes', data: fert, borderColor: PAL.navy, backgroundColor: PAL.navy, tension: .3 },
+      { label: 'Fungicidas', data: fung, borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .3 },
+      { label: 'Herbicidas', data: herb, borderColor: PAL.redDark, backgroundColor: PAL.redDark, tension: .3 }
+    ], { xTicks: 9, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': $ ' + esCO(c.parsed.y); } } });
+  })();
+
+  /* =====================================================================
+     SECCIÓN 4 · ÍNDICES DE PRECIOS
+     ===================================================================== */
+  (function(){
+    function categoria(v){ if (v < 0) return 'negativo'; if (v > 10) return 'alto'; if (v >= 5) return 'medio'; return 'bajo'; }
+    var CAT_COLOR = { alto: PAL.redDark, medio: PAL.orange, bajo: PAL.forest, negativo: PAL.lavender };
+    var CAT_LABEL = { alto: '> 10%', medio: '5–10%', bajo: '0–5%', negativo: 'Negativo' };
+
+    var ipc = [['General',0.6],['Alimentos',9.4],['Vivienda',4.1],['Ropa',4.6],['Educación',4.3],['Salud',10.8],['Transporte',8.5],['Comunicaciones',0.4]];
+    var ipp = [['General',-1.6],['Agropecuario',13.4],['Industrial',2.9],['Minería',-2.1],['Café',14.1],['Otros agríc.',10.6],['Pecuario',9.9],['Energía',6.2]];
+
+    function renderIndice(canvasId, legendId, rows){
+      var labels = rows.map(function(r){ return r[0]; });
+      var values = rows.map(function(r){ return r[1]; });
+      var colors = values.map(function(v){ return CAT_COLOR[categoria(v)]; });
+      hBarChart(canvasId, labels, values, colors, { xFormat: function(v){ return v + '%'; }, tooltipCallbacks: { label: function(c){ return c.parsed.x + '%'; } } });
+      var legend = document.getElementById(legendId);
+      ['alto','medio','bajo','negativo'].forEach(function(cat){
+        legend.innerHTML += '<span class="legend-chip"><span class="legend-swatch" style="background:' + CAT_COLOR[cat] + ';"></span>' + CAT_LABEL[cat] + '</span>';
+      });
+    }
+    renderIndice('chIpc', 'legendIpc', ipc);
+    renderIndice('chIpp', 'legendIpp', ipp);
+  })();
+
+  /* =====================================================================
+     SECCIÓN 5 · MECANISMO PAI
+     ===================================================================== */
+  (function(){
+    var meses = monthRange(2022, 7, 48); // 08/2022 .. 07/2026
+    var rng = mulberry32(606);
+    function serie(base, amp, phase, trend){
+      return meses.map(function(_, i){ return round(base + amp*Math.sin(i/9+phase) + trend*i + (rng()-0.5)*base*0.03); });
+    }
+    var s17 = serie(1900000, 250000, 0.2, -1500);
+    var s2340203 = serie(1700000, 220000, 1.1, -1000);
+    var s2542 = serie(1950000, 300000, 2.0, 2000);
+    var s2642 = serie(1750000, 260000, 0.6, -500);
+    var sDAP = serie(1850000, 350000, 1.6, 1200);
+    var sKCL = serie(1650000, 300000, 2.6, -800);
+    var sUrea = serie(1800000, 200000, 0.9, 500);
+    var promedio = meses.map(function(_, i){ return round((s17[i]+s2340203[i]+s2542[i]+s2642[i]+sDAP[i]+sKCL[i]+sUrea[i])/7); });
+
+    lineChart('chFertilizantes', meses, [
+      { label: '17-6-18-2', data: s17, borderColor: PAL.navy, backgroundColor: PAL.navy, tension: .3 },
+      { label: '25-4-24', data: s2542, borderColor: PAL.forest, backgroundColor: PAL.forest, tension: .3 },
+      { label: 'KCL', data: sKCL, borderColor: PAL.forestLight, backgroundColor: PAL.forestLight, tension: .3 },
+      { label: 'DAP', data: sDAP, borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .3 },
+      { label: 'Urea', data: sUrea, borderColor: PAL.lavender, backgroundColor: PAL.lavender, tension: .3 },
+      { label: '23-4-20-3', data: s2340203, borderColor: PAL.olive2, backgroundColor: PAL.olive2, tension: .3 },
+      { label: '26-4-22', data: s2642, borderColor: PAL.redDark, backgroundColor: PAL.redDark, tension: .3 },
+      { label: 'Promedio', data: promedio, borderColor: PAL.oliveDark, backgroundColor: PAL.oliveDark, borderDash: [6,4], tension: .3 }
+    ], { xTicks: 9, yFormat: function(v){ return '$' + (v/1000000).toFixed(1) + 'M'; }, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': $ ' + esCO(c.parsed.y); } } });
+  })();
+
+  /* =====================================================================
+     SECCIÓN 6 · MECANISMO MECIC
+     ===================================================================== */
+  (function(){
+    var meses = monthRange(2021, 0, 67); // 01/2021 .. 07/2026
+    var rng = mulberry32(707);
+    var costoMedio = [], limiteSuperior = [], precioInterno = [];
+    for (var i = 0; i < meses.length; i++){
+      var cm = 1300000 + i*4200 + (rng()-0.5)*20000;
+      costoMedio.push(cm);
+      limiteSuperior.push(round(cm*(1.12+0.05*Math.sin(i/10)) + 60000));
+      precioInterno.push(round(1350000 + 260000*Math.sin(i/7+0.5) + (i>30?(i-30)*3000:0) + (rng()-0.5)*60000));
+    }
+    costoMedio = costoMedio.map(function(v){ return round(v); });
+    var mediaMovil = precioInterno.map(function(_, i, arr){
+      var win = arr.slice(Math.max(0, i-11), i+1);
+      return round(win.reduce(function(a,b){ return a+b; }, 0) / win.length);
+    });
+
+    lineChart('chMecic', meses, [
+      { label: 'Costo Medio de Producción', data: costoMedio, borderColor: PAL.navy, backgroundColor: PAL.navy, tension: .3 },
+      { label: 'Límite Superior', data: limiteSuperior, borderColor: PAL.red, backgroundColor: PAL.red, borderDash: [6,4], tension: .3 },
+      { label: 'Media Móvil del precio FF94', data: mediaMovil, borderColor: PAL.forest, backgroundColor: PAL.forest, tension: .3 },
+      { label: 'Precio Interno', data: precioInterno, borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .3 }
+    ], { xTicks: 9, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': $ ' + esCO(c.parsed.y); } } });
+  })();
+
+})();
+</script>
+
+</body>
+</html>
