@@ -40,7 +40,8 @@
   h1,h2,h3{text-wrap:balance;}
   .page{max-width:1360px; margin:0 auto; padding:0 20px 72px;}
 
-  .masthead{background:var(--navy); color:var(--white); margin:0 -20px 36px; padding:22px 20px 24px;
+  .topbar{position:sticky; top:0; z-index:30; margin:0 -20px; box-shadow:0 2px 6px rgba(34,52,79,.08);}
+  .masthead{background:var(--navy); color:var(--white); padding:18px 20px 20px;
     display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
   .brand{display:flex; align-items:center; gap:13px;}
   .brand-mark{width:42px; height:42px; border-radius:11px; background:var(--forest-light);
@@ -50,7 +51,16 @@
   .period-chip{background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.3); border-radius:999px;
     padding:7px 16px; font-size:13px; font-weight:600; letter-spacing:.02em; color:var(--white); white-space:nowrap;}
 
-  .section{margin-top:46px;}
+  .tabnav{display:flex; gap:2px; overflow-x:auto; background:var(--surface); border-bottom:1px solid var(--border); padding:0 12px;}
+  .tabnav::-webkit-scrollbar{height:0;}
+  .tab-btn{appearance:none; border:none; background:transparent; margin:0; padding:14px 16px 12px;
+    font-family:var(--font-body); font-weight:600; font-size:13.5px; color:var(--ink-muted);
+    cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent;}
+  .tab-btn:hover{color:var(--navy);}
+  .tab-btn:focus-visible{outline:2px solid var(--forest); outline-offset:-2px;}
+  .tab-btn.active{color:var(--navy); border-bottom-color:var(--forest);}
+
+  .section{margin-top:32px; scroll-margin-top:112px;}
   .section-head{display:flex; align-items:baseline; gap:14px; margin-bottom:18px; border-bottom:2px solid var(--border); padding-bottom:10px;}
   .section-num{font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--forest); letter-spacing:.03em;}
   .section-head h2{font-family:var(--font-display); font-size:25px; margin:0; color:var(--navy); font-weight:600;}
@@ -111,7 +121,9 @@
   .two-col .panel{margin-bottom:0;}
 
   @media (max-width:480px){
-    .masthead{padding:18px 16px 20px;}
+    .masthead{padding:16px 16px 18px;}
+    .tabnav{padding:0 8px;}
+    .tab-btn{padding:12px 12px 10px; font-size:13px;}
     .panel{padding:18px 16px;}
     .brand-text h1{font-size:19px;}
   }
@@ -122,22 +134,32 @@
 
 <div class="page">
 
-  <header class="masthead">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M4 9h13a3 3 0 0 1 0 6h-1" stroke="#22344f" stroke-width="1.6" stroke-linecap="round"/>
-          <path d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" stroke="#22344f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M7 3.5c-.6.9-.6 1.5 0 2.4M11 3.5c-.6.9-.6 1.5 0 2.4" stroke="#22344f" stroke-width="1.4" stroke-linecap="round"/>
-        </svg>
+  <div class="topbar">
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M4 9h13a3 3 0 0 1 0 6h-1" stroke="#22344f" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" stroke="#22344f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 3.5c-.6.9-.6 1.5 0 2.4M11 3.5c-.6.9-.6 1.5 0 2.4" stroke="#22344f" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="eyebrow">Fondo de Estabilización de Precios</div>
+          <h1>Observatorio Cafetero &middot; Informe Mensual</h1>
+        </div>
       </div>
-      <div class="brand-text">
-        <div class="eyebrow">Fondo de Estabilización de Precios</div>
-        <h1>Observatorio Cafetero &middot; Informe Mensual</h1>
-      </div>
-    </div>
-    <div class="period-chip">Período de referencia: Julio 2026</div>
-  </header>
+      <div class="period-chip">Período de referencia: Julio 2026</div>
+    </header>
+    <nav class="tabnav" id="tabnav" role="tablist" aria-label="Secciones del informe">
+      <button type="button" class="tab-btn active" data-tab="precio-interno" role="tab" aria-selected="true">Precio Interno</button>
+      <button type="button" class="tab-btn" data-tab="produccion" role="tab" aria-selected="false">Producción</button>
+      <button type="button" class="tab-btn" data-tab="costo-medio" role="tab" aria-selected="false">Costo Medio de Producción</button>
+      <button type="button" class="tab-btn" data-tab="indices-precios" role="tab" aria-selected="false">Índices de Precios</button>
+      <button type="button" class="tab-btn" data-tab="mecanismo-pai" role="tab" aria-selected="false">Mecanismo PAI</button>
+      <button type="button" class="tab-btn" data-tab="mecanismo-mecic" role="tab" aria-selected="false">Mecanismo MeCIC</button>
+    </nav>
+  </div>
 
   <!-- ============ SECCIÓN 1: PRECIO INTERNO ============ -->
   <section class="section" id="precio-interno">
@@ -232,7 +254,7 @@
   </section>
 
   <!-- ============ SECCIÓN 2: PRODUCCIÓN ============ -->
-  <section class="section" id="produccion">
+  <section class="section" id="produccion" hidden>
     <div class="section-head"><span class="section-num">02</span><h2>Producción</h2></div>
 
     <div class="panel">
@@ -277,7 +299,7 @@
   </section>
 
   <!-- ============ SECCIÓN 3: COSTO MEDIO DE PRODUCCIÓN ============ -->
-  <section class="section" id="costo-medio">
+  <section class="section" id="costo-medio" hidden>
     <div class="section-head"><span class="section-num">03</span><h2>Costo Medio de Producción</h2></div>
 
     <div class="panel" style="background:var(--navy); border:none; color:var(--white);">
@@ -317,7 +339,7 @@
   </section>
 
   <!-- ============ SECCIÓN 4: ÍNDICES DE PRECIOS ============ -->
-  <section class="section" id="indices-precios">
+  <section class="section" id="indices-precios" hidden>
     <div class="section-head"><span class="section-num">04</span><h2>Índices de Precios</h2></div>
 
     <div class="panel" style="background:var(--navy); border:none;">
@@ -344,7 +366,7 @@
   </section>
 
   <!-- ============ SECCIÓN 5: MECANISMO PAI ============ -->
-  <section class="section" id="mecanismo-pai">
+  <section class="section" id="mecanismo-pai" hidden>
     <div class="section-head"><span class="section-num">05</span><h2>Mecanismo PAI</h2></div>
 
     <div class="two-col">
@@ -395,7 +417,7 @@
   </section>
 
   <!-- ============ SECCIÓN 6: MECANISMO MECIC ============ -->
-  <section class="section" id="mecanismo-mecic">
+  <section class="section" id="mecanismo-mecic" hidden>
     <div class="section-head"><span class="section-num">06</span><h2>Mecanismo MeCIC</h2></div>
 
     <div class="two-col">
@@ -850,6 +872,36 @@
       { label: 'Media Móvil del precio FF94', data: mediaMovil, borderColor: PAL.forest, backgroundColor: PAL.forest, tension: .3 },
       { label: 'Precio Interno', data: precioInterno, borderColor: PAL.orange, backgroundColor: PAL.orange, tension: .3 }
     ], { xTicks: 9, yFormat: moneyShort, tooltipCallbacks: { label: function(c){ return c.dataset.label + ': $ ' + esCO(c.parsed.y); } } });
+  })();
+
+  /* =====================================================================
+     NAVEGACIÓN POR PESTAÑAS
+     ===================================================================== */
+  (function(){
+    var tabButtons = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+
+    function activate(tabId){
+      sections.forEach(function(sec){ sec.hidden = sec.id !== tabId; });
+      tabButtons.forEach(function(btn){
+        var isActive = btn.getAttribute('data-tab') === tabId;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      // Charts created while their section was hidden have a 0x0 layout box;
+      // resize them once the section is actually visible so they render at size.
+      var shown = document.getElementById(tabId);
+      requestAnimationFrame(function(){
+        shown.querySelectorAll('canvas').forEach(function(canvas){
+          var chart = Chart.getChart(canvas);
+          if (chart) chart.resize();
+        });
+      });
+    }
+
+    tabButtons.forEach(function(btn){
+      btn.addEventListener('click', function(){ activate(btn.getAttribute('data-tab')); });
+    });
   })();
 
 })();
